@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
@@ -17,6 +17,7 @@ import {
   toggleTeacherLanguage,
 } from "@/app/actions/update-teacher-profile";
 import { updateTeacherName } from "@/app/actions/update-teacher-name";
+import { updateTeacherImageUrl } from "@/app/actions/update-teacher-image";
 import { getInstruments, getLanguages } from "@/app/actions/get-instruments-languages";
 
 interface EditableTeacherProfileProps {
@@ -53,6 +54,8 @@ export default function EditableTeacherProfile({
   const [editedLastName, setEditedLastName] = useState(lastName || "");
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [selectedInstruments, setSelectedInstruments] = useState<number[]>(
     initialTeacher.instruments.map((i) => i.id)
   );
@@ -150,6 +153,90 @@ export default function EditableTeacherProfile({
     setIsEditingName(false);
   };
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    // Validate file type - check for specific image MIME types
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      alert("Please upload a valid image file (JPEG, PNG, GIF, or WebP)");
+      return;
+    }
+
+    // Validate file size - minimum 1KB (to prevent empty/corrupted files)
+    const minSize = 1024; // 1KB
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size < minSize) {
+      alert("Image file is too small. Please select a valid image file.");
+      return;
+    }
+
+    // Validate file size - maximum 5MB
+    if (file.size > maxSize) {
+      alert("Image size must be less than 5MB. Please compress the image or choose a smaller file.");
+      return;
+    }
+
+    // Validate file extension as additional check
+    const fileExtension = file.name.toLowerCase().split(".").pop();
+    const allowedExtensions = ["jpg", "jpeg", "png", "gif", "webp", "svg"];
+    if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+      alert("Invalid file extension. Please upload a JPEG, PNG, GIF, WebP, or SVG image.");
+      return;
+    }
+
+    if (!isLoaded || !clerkUser) {
+      alert("User not loaded");
+      return;
+    }
+
+    setIsUploadingImage(true);
+
+    try {
+      // Upload image to Clerk using setProfileImage
+      await clerkUser.setProfileImage({ file });
+
+      // Get the updated image URL from Clerk
+      await clerkUser.reload();
+      const imageUrl = clerkUser.imageUrl;
+
+      if (!imageUrl) {
+        throw new Error("Failed to get image URL from Clerk");
+      }
+
+      // Update database with new image URL
+      const result = await updateTeacherImageUrl(imageUrl);
+      if (result.error) {
+        console.error("Error saving image URL:", result.error);
+        alert("Failed to save image");
+      } else {
+        router.refresh();
+      }
+    } catch (err) {
+      console.error("Error uploading image:", err);
+      alert("Failed to upload image");
+    } finally {
+      setIsUploadingImage(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
   const handleToggleInstrument = async (instrumentId: number) => {
     try {
       const result = await toggleTeacherInstrument(instrumentId);
@@ -191,13 +278,38 @@ export default function EditableTeacherProfile({
       {/* Left Side - Profile Info */}
       <div className="md:col-span-1 space-y-4">
         <div className="space-y-4">
-          <div className="relative w-48 h-48 mx-auto rounded-full overflow-hidden border-4 border-primary/20 shadow-lg">
+          <div className="relative w-48 h-48 mx-auto rounded-full overflow-hidden border-4 border-primary/20 shadow-lg group">
             <Image
               src={initialTeacher.imageUrl || "/images/profile/default_user.png"}
               alt={[firstName, lastName].filter(Boolean).join(" ") || "Teacher"}
               fill
               className="object-cover"
               sizes="192px"
+            />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <button
+                onClick={handleUploadClick}
+                disabled={isUploadingImage}
+                className="bg-background/90 hover:bg-background px-3 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+              >
+                <Image
+                  src="/svg/upload_button.svg"
+                  alt="Upload"
+                  width={20}
+                  height={20}
+                  className="object-contain"
+                />
+                <span className="text-sm font-medium text-foreground">
+                  {isUploadingImage ? "Uploading..." : "Upload"}
+                </span>
+              </button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
             />
           </div>
 
@@ -401,6 +513,56 @@ export default function EditableTeacherProfile({
             </div>
           )}
         </ProfileSection>
+      </div>
+
+      {/* Acknowledgements */}
+      <div className="md:col-span-3 mt-12 pt-6 border-t border-border">
+        <div className="text-xs text-muted-foreground space-y-1 text-center max-w-2xl mx-auto">
+          <div>
+            Icons made by{" "}
+            <a
+              href="https://www.flaticon.com/authors/flat-icons"
+              title="Flat Icons"
+              className="text-primary hover:text-primary/80 underline"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Flat Icons
+            </a>{" "}
+            from{" "}
+            <a
+              href="https://www.flaticon.com/"
+              title="Flaticon"
+              className="text-primary hover:text-primary/80 underline"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              www.flaticon.com
+            </a>
+          </div>
+          <div>
+            Icons made by{" "}
+            <a
+              href="https://www.freepik.com"
+              title="Freepik"
+              className="text-primary hover:text-primary/80 underline"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Freepik
+            </a>{" "}
+            from{" "}
+            <a
+              href="https://www.flaticon.com/"
+              title="Flaticon"
+              className="text-primary hover:text-primary/80 underline"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              www.flaticon.com
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -74,6 +74,56 @@ export default async function TeacherProfilePage({
                 </ProfileSection>
               </div>
             </div>
+
+            {/* Acknowledgements */}
+            <div className="mt-12 pt-6 border-t border-border">
+              <div className="text-xs text-muted-foreground space-y-1 text-center max-w-2xl mx-auto">
+                <div>
+                  Icons made by{" "}
+                  <a
+                    href="https://www.flaticon.com/authors/flat-icons"
+                    title="Flat Icons"
+                    className="text-primary hover:text-primary/80 underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Flat Icons
+                  </a>{" "}
+                  from{" "}
+                  <a
+                    href="https://www.flaticon.com/"
+                    title="Flaticon"
+                    className="text-primary hover:text-primary/80 underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    www.flaticon.com
+                  </a>
+                </div>
+                <div>
+                  Icons made by{" "}
+                  <a
+                    href="https://www.freepik.com"
+                    title="Freepik"
+                    className="text-primary hover:text-primary/80 underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Freepik
+                  </a>{" "}
+                  from{" "}
+                  <a
+                    href="https://www.flaticon.com/"
+                    title="Flaticon"
+                    className="text-primary hover:text-primary/80 underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    www.flaticon.com
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </main>
