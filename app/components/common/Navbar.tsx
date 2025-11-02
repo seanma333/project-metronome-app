@@ -5,6 +5,11 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import {
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from "@clerk/nextjs";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -49,12 +54,17 @@ export default function Navbar() {
 
           {/* Desktop CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost" asChild>
-              <Link href="/login">Sign In</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/signup">Get Started</Link>
-            </Button>
+            <SignedOut>
+              <Button variant="ghost" asChild>
+                <Link href="/sign-in">Sign In</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/sign-up">Get Started</Link>
+              </Button>
+            </SignedOut>
+            <SignedIn>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
           </div>
 
           {/* Mobile Menu Button */}
@@ -92,12 +102,19 @@ export default function Navbar() {
               FAQ
             </Link>
             <div className="flex flex-col space-y-2 pt-4 border-t border-border">
-              <Button variant="ghost" asChild className="w-full">
-                <Link href="/login">Sign In</Link>
-              </Button>
-              <Button asChild className="w-full">
-                <Link href="/signup">Get Started</Link>
-              </Button>
+              <SignedOut>
+                <Button variant="ghost" asChild className="w-full">
+                  <Link href="/sign-in">Sign In</Link>
+                </Button>
+                <Button asChild className="w-full">
+                  <Link href="/sign-up">Get Started</Link>
+                </Button>
+              </SignedOut>
+              <SignedIn>
+                <div className="flex items-center justify-center py-2">
+                  <UserButton afterSignOutUrl="/" />
+                </div>
+              </SignedIn>
             </div>
           </div>
         )}
