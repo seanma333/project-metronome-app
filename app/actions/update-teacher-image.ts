@@ -1,6 +1,6 @@
 "use server";
 
-import { currentUser, clerkClient } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { teachers, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -25,6 +25,7 @@ export async function updateTeacherImageUrl(imageUrl: string) {
     const userId = user[0].id;
 
     // Update teacher imageUrl in database
+    // Note: The image is already uploaded to Clerk via setProfileImage() on the client side
     await db
       .update(teachers)
       .set({
@@ -32,17 +33,6 @@ export async function updateTeacherImageUrl(imageUrl: string) {
         updatedAt: new Date(),
       })
       .where(eq(teachers.id, userId));
-
-    // Update Clerk user's profile image
-    try {
-      const client = await clerkClient();
-      await client.users.updateUser(clerkUser.id, {
-        imageUrl: imageUrl || undefined,
-      });
-    } catch (clerkError) {
-      console.error("Error updating Clerk user image:", clerkError);
-      // Don't fail the entire operation if Clerk update fails
-    }
 
     return { success: true, imageUrl };
   } catch (error) {
