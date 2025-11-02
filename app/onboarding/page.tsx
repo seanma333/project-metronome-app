@@ -57,6 +57,9 @@ export default async function OnboardingPage({
           <OnboardingForm
             userId={user.id}
             role={user.publicMetadata?.role as string | undefined}
+            firstName={user.firstName || ""}
+            lastName={user.lastName || ""}
+            email={user.emailAddresses[0]?.emailAddress || ""}
           />
         </div>
       </main>

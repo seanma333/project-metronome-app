@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, varchar, pgEnum, serial, integer, boolean, jsonb, uuid, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, varchar, pgEnum, serial, integer, boolean, jsonb, uuid, unique, index } from "drizzle-orm/pg-core";
 
 // Role enum for users
 export const roleEnum = pgEnum("user_role", ["TEACHER", "STUDENT", "PARENT"]);

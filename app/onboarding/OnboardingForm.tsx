@@ -1,19 +1,81 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { createUserFromClerk } from "@/app/actions/create-user";
+import TeacherForm from "./TeacherForm";
+import StudentForm from "./StudentForm";
+import ParentForm from "./ParentForm";
 
 interface OnboardingFormProps {
   userId: string;
   role?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
 }
 
-export default function OnboardingForm({ userId, role }: OnboardingFormProps) {
-  const router = useRouter();
+export default function OnboardingForm({ userId, role, firstName, lastName, email }: OnboardingFormProps) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSkip = () => {
-    router.push("/");
+  useEffect(() => {
+    const createUser = async () => {
+      try {
+        const result = await createUserFromClerk();
+        if (result.error) {
+          setError(result.error);
+        }
+      } catch (err) {
+        setError("Failed to initialize user");
+        console.error("Error creating user:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    createUser();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <Card className="border-border shadow-lg">
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">Setting up your account...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const renderForm = () => {
+    if (!role) {
+      return (
+        <div className="space-y-4">
+          <p className="text-muted-foreground">
+            Please wait while we determine your account type...
+          </p>
+        </div>
+      );
+    }
+
+    switch (role.toUpperCase()) {
+      case "TEACHER":
+        return <TeacherForm firstName={firstName} lastName={lastName} email={email} />;
+      case "STUDENT":
+        return <StudentForm firstName={firstName} lastName={lastName} email={email} />;
+      case "PARENT":
+        return <ParentForm firstName={firstName} lastName={lastName} />;
+      default:
+        return (
+          <div className="space-y-4">
+            <p className="text-muted-foreground">
+              Unknown role: {role}. Please contact support.
+            </p>
+          </div>
+        );
+    }
   };
 
   return (
@@ -23,20 +85,12 @@ export default function OnboardingForm({ userId, role }: OnboardingFormProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <p className="text-muted-foreground">
-            {role
-              ? `Setting up your profile as a ${role.toLowerCase()}...`
-              : "Setting up your profile..."}
-          </p>
-          {/* TODO: Add onboarding form fields based on role */}
-          <p className="text-sm text-muted-foreground">
-            Onboarding form will be implemented here.
-          </p>
-          <div className="flex justify-end pt-4 border-t border-border">
-            <Button variant="outline" onClick={handleSkip}>
-              Skip
-            </Button>
-          </div>
+          {error && (
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
+          {renderForm()}
         </div>
       </CardContent>
     </Card>
