@@ -1,6 +1,30 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-export default clerkMiddleware();
+// Define routes that don't require role check
+const isPublicRoute = createRouteMatcher([
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/onboarding(.*)",
+  "/",
+  "/teachers(.*)",
+]);
+
+export default clerkMiddleware(async (auth, req) => {
+  const { userId, sessionClaims } = await auth();
+
+  // If user is logged in and not on a public route, check for role
+  if (userId && !isPublicRoute(req)) {
+    const metadata = sessionClaims?.metadata as { role?: string } | undefined;
+    const role = metadata?.role;
+    const validRoles = ["TEACHER", "STUDENT", "PARENT"];
+
+    // If no role or invalid role, redirect to onboarding
+    if (!role || !validRoles.includes(role.toUpperCase())) {
+      return NextResponse.redirect(new URL("/onboarding", req.url));
+    }
+  }
+});
 
 export const config = {
   matcher: [

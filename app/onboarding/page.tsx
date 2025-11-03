@@ -1,38 +1,18 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { updateUserRole } from "@/app/actions/update-user-metadata";
 import OnboardingForm from "./OnboardingForm";
+import RoleSelectionOnboarding from "./RoleSelectionOnboarding";
 
-interface OnboardingPageProps {
-  searchParams: Promise<{ role?: string }>;
-}
-
-export default async function OnboardingPage({
-  searchParams,
-}: OnboardingPageProps) {
-  const params = await searchParams;
+export default async function OnboardingPage() {
   const user = await currentUser();
 
   if (!user) {
     redirect("/sign-in");
   }
 
-  // Get role from URL params or user metadata
-  const roleParam = params.role?.toUpperCase();
+  // Check if user has a role in metadata
+  const role = user.publicMetadata?.role as string | undefined;
   const validRoles = ["TEACHER", "STUDENT", "PARENT"];
-
-  // If role is provided in URL and not in metadata, save it
-  if (
-    roleParam &&
-    validRoles.includes(roleParam) &&
-    !user.publicMetadata.role
-  ) {
-    const result = await updateUserRole(roleParam as "TEACHER" | "STUDENT" | "PARENT");
-    if (result.success) {
-      // Refresh to get updated user data
-      redirect(`/onboarding?role=${roleParam}`);
-    }
-  }
 
   return (
     <div className="min-h-screen flex flex-col relative">
@@ -50,17 +30,21 @@ export default async function OnboardingPage({
               Welcome to <span className="text-primary">TempoLink</span>
             </h1>
             <p className="text-muted-foreground">
-              Let's set up your profile
+              {!role ? "First, let's determine your role" : "Let's set up your profile"}
             </p>
           </div>
 
-          <OnboardingForm
-            userId={user.id}
-            role={user.publicMetadata?.role as string | undefined}
-            firstName={user.firstName || ""}
-            lastName={user.lastName || ""}
-            email={user.emailAddresses[0]?.emailAddress || ""}
-          />
+          {!role || !validRoles.includes(role.toUpperCase()) ? (
+            <RoleSelectionOnboarding />
+          ) : (
+            <OnboardingForm
+              userId={user.id}
+              role={role}
+              firstName={user.firstName || ""}
+              lastName={user.lastName || ""}
+              email={user.emailAddresses[0]?.emailAddress || ""}
+            />
+          )}
         </div>
       </main>
     </div>

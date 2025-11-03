@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/app/components/ui/radio-group";
+import { Label } from "@/app/components/ui/label";
 import { cn } from "@/lib/utils";
 
 type Role = "TEACHER" | "STUDENT" | "PARENT";

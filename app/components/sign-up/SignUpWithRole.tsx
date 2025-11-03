@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { SignUp } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/app/components/ui/button";
 import RoleSelection from "./RoleSelection";
 
 type Role = "TEACHER" | "STUDENT" | "PARENT";
