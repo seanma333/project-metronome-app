@@ -6,7 +6,7 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
-export async function createUserFromClerk() {
+export async function createUserFromClerk(timezone?: string) {
   try {
     const clerkUser = await currentUser();
 
@@ -29,6 +29,9 @@ export async function createUserFromClerk() {
     // Get role from metadata
     const role = clerkUser.publicMetadata?.role as "TEACHER" | "STUDENT" | "PARENT" | undefined;
 
+    // Use provided timezone or default to UTC
+    const preferredTimezone = timezone || "UTC";
+
     // Create new user
     const newUserId = randomUUID();
     await db.insert(users).values({
@@ -38,6 +41,7 @@ export async function createUserFromClerk() {
       firstName: clerkUser.firstName || null,
       lastName: clerkUser.lastName || null,
       role: role || null,
+      preferredTimezone: preferredTimezone,
     });
 
     return { success: true, userId: newUserId, existing: false };

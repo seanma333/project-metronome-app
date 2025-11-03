@@ -22,7 +22,10 @@ export default function OnboardingForm({ userId, role, firstName, lastName, emai
   useEffect(() => {
     const createUser = async () => {
       try {
-        const result = await createUserFromClerk();
+        // Get user's timezone from browser
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+        const result = await createUserFromClerk(timezone);
         if (result.error) {
           setError(result.error);
         }

@@ -59,6 +59,12 @@ export default function Navbar() {
                   >
                     My Profile
                   </Link>
+                  <Link
+                    href="/my-preferences"
+                    className="text-foreground/80 hover:text-primary transition-colors"
+                  >
+                    Preferences
+                  </Link>
                 </SignedIn>
               </div>
 
@@ -120,6 +126,13 @@ export default function Navbar() {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     My Profile
+                  </Link>
+                  <Link
+                    href="/my-preferences"
+                    className="block text-foreground/80 hover:text-primary transition-colors py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Preferences
                   </Link>
                 </SignedIn>
                 <div className="flex flex-col space-y-2 pt-4 border-t border-border">

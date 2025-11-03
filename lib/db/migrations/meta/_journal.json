@@ -15,6 +15,20 @@
       "when": 1762135092938,
       "tag": "0001_sudden_rawhide_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1762138329093,
+      "tag": "0002_certain_smasher",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1762139217117,
+      "tag": "0003_clammy_juggernaut",
+      "breakpoints": true
     }
   ]
 }

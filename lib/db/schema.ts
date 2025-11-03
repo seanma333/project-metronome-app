@@ -1,10 +1,18 @@
-import { pgTable, text, timestamp, varchar, pgEnum, serial, integer, boolean, jsonb, uuid, unique, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, varchar, pgEnum, serial, integer, boolean, jsonb, uuid, unique, index, real, customType } from "drizzle-orm/pg-core";
 
 // Role enum for users
 export const roleEnum = pgEnum("user_role", ["TEACHER", "STUDENT", "PARENT"]);
 
 // Teaching format enum for teachers
 export const teachingFormatEnum = pgEnum("teaching_format", ["IN_PERSON_ONLY", "ONLINE_ONLY", "IN_PERSON_AND_ONLINE"]);
+
+// Age preference enum for teachers
+export const agePreferenceEnum = pgEnum("age_preference", ["ALL_AGES", "13+", "ADULTS_ONLY"]);
+
+// PostGIS Geography type for spatial data
+const geography = customType<{ data: string; driverParam: string }>({
+  dataType: () => 'geography(Point, 4326)',
+});
 
 // Users table - linked to Clerk user ID
 export const users = pgTable("users", {
@@ -15,6 +23,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name", { length: 100 }), // Clerk last name
   role: roleEnum("role"), // TEACHER, STUDENT, PARENT
   imageUrl: varchar("image_url", { length: 255 }), // Profile image URL (for PARENT role users)
+  preferredTimezone: varchar("preferred_timezone", { length: 50 }), // User's preferred timezone (e.g., "America/New_York")
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -25,6 +34,7 @@ export const teachers = pgTable("teachers", {
   bio: text("bio"),
   acceptingStudents: boolean("accepting_students").default(false),
   teachingFormat: teachingFormatEnum("teaching_format").default("ONLINE_ONLY"),
+  agePreference: agePreferenceEnum("age_preference").default("ALL_AGES"),
   imageUrl: varchar("image_url", { length: 255 }),
   profileName: varchar("profile_name", { length: 100 }).unique().notNull(), // Used for URL slug
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -100,4 +110,46 @@ export const languages = pgTable("languages", {
   code: varchar("code", { length: 10 }).notNull().unique(), // ISO language code
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Addresses table
+// Stores addresses that can be shared by multiple users (many-to-many relationship)
+export const addresses = pgTable("addresses", {
+  id: uuid("id").primaryKey(),
+  address: jsonb("address").notNull(), // JSON object representing the address (standard format)
+  addressFormatted: varchar("address_formatted", { length: 500 }).notNull().unique(), // Lowercase formatted string, unique
+  latitude: real("latitude"), // Latitude (nullable, filled during geocoding)
+  longitude: real("longitude"), // Longitude (nullable, filled during geocoding)
+  location: geography("location"), // PostGIS geography column for spatial queries (Point, SRID 4326)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Index for geocoding lookups
+    addressFormattedIdx: index("address_formatted_idx").on(table.addressFormatted),
+    // Index for spatial queries using lat/long (for fallback queries)
+    locationIdx: index("location_idx").on(table.latitude, table.longitude),
+    // Spatial index for PostGIS geography column (GIST index will be created via migration)
+    // Note: Drizzle doesn't support GIST index syntax directly, so this will be added via SQL migration
+  };
+});
+
+// Junction table: Users to Addresses (many-to-many)
+export const userAddresses = pgTable("user_addresses", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  addressId: uuid("address_id")
+    .notNull()
+    .references(() => addresses.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    uniqueUserAddress: unique().on(table.userId, table.addressId),
+    // Index for user lookups
+    userIdIdx: index("user_addresses_user_id_idx").on(table.userId),
+    // Index for address lookups
+    addressIdIdx: index("user_addresses_address_id_idx").on(table.addressId),
+  };
 });
