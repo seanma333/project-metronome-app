@@ -59,7 +59,7 @@ const US_STATES = [
 ];
 
 interface StateSelectProps {
-  value: string;
+  value: string | undefined;
   onChange: (value: string) => void;
   id?: string;
   placeholder?: string;
@@ -71,10 +71,12 @@ export function StateSelect({ value, onChange, id, placeholder = "Select state..
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Find the selected state for display
-  const selectedState = US_STATES.find(
-    (state) => state.abbreviation === value || state.name === value
-  );
-  const displayValue = selectedState ? `${selectedState.name} (${selectedState.abbreviation})` : value;
+  const selectedState = value
+    ? US_STATES.find(
+        (state) => state.abbreviation === value || state.name === value
+      )
+    : undefined;
+  const displayValue = selectedState ? `${selectedState.name} (${selectedState.abbreviation})` : value || "";
 
   // Filter states based on search query
   const filteredStates = US_STATES.filter(
@@ -133,7 +135,7 @@ export function StateSelect({ value, onChange, id, placeholder = "Select state..
                   key={state.abbreviation}
                   onClick={() => handleSelect(state)}
                   className={`px-3 py-2 cursor-pointer hover:bg-accent transition-colors ${
-                    value === state.abbreviation || value === state.name
+                    value && (value === state.abbreviation || value === state.name)
                       ? "bg-accent font-medium"
                       : ""
                   }`}

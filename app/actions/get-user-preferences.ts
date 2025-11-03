@@ -49,9 +49,9 @@ export async function getUserPreferences() {
             preferredTimezone: userData.preferredTimezone,
           },
           teacher: {
-            acceptingStudents: teacher[0].acceptingStudents,
-            teachingFormat: teacher[0].teachingFormat,
-            agePreference: teacher[0].agePreference,
+            acceptingStudents: teacher[0].acceptingStudents ?? false,
+            teachingFormat: teacher[0].teachingFormat ?? "ONLINE_ONLY",
+            agePreference: teacher[0].agePreference ?? "ALL_AGES",
           },
           addresses: userAddressList,
         };
@@ -69,4 +69,3 @@ export async function getUserPreferences() {
     return null;
   }
 }
-

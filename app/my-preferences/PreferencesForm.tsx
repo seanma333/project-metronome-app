@@ -41,12 +41,13 @@ interface PreferencesFormProps {
 }
 
 interface AddressFormData {
-  streetAddress: string;
-  aptUnit: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
+  streetAddress?: string;
+  aptUnit?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  [key: string]: string | undefined;
 }
 
 export default function PreferencesForm({
