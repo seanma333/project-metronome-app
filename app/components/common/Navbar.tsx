@@ -10,9 +10,13 @@ import {
   SignedOut,
   UserButton,
 } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user } = useUser();
+  const role = (user?.publicMetadata?.role as string | undefined) || undefined;
+  const canFindTeacher = role === "STUDENT" || role === "PARENT";
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border">
@@ -65,6 +69,14 @@ export default function Navbar() {
                   >
                     Preferences
                   </Link>
+                  {canFindTeacher && (
+                    <Link
+                      href="/search"
+                      className="text-foreground/80 hover:text-primary transition-colors"
+                    >
+                      Find Teacher
+                    </Link>
+                  )}
                 </SignedIn>
               </div>
 
@@ -134,6 +146,15 @@ export default function Navbar() {
                   >
                     Preferences
                   </Link>
+                  {canFindTeacher && (
+                    <Link
+                      href="/search"
+                      className="block text-foreground/80 hover:text-primary transition-colors py-2"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Find Teacher
+                    </Link>
+                  )}
                 </SignedIn>
                 <div className="flex flex-col space-y-2 pt-4 border-t border-border">
                   <SignedOut>

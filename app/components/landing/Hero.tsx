@@ -28,7 +28,7 @@ export default function Hero() {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
               <Button size="lg" asChild className="text-lg px-8">
-                <Link href="/signup?role=student">Find a Teacher</Link>
+                <Link href="/search">Find a Teacher</Link>
               </Button>
               <Button size="lg" variant="outline" asChild className="text-lg px-8">
                 <Link href="/signup?role=teacher">I'm a Teacher</Link>
