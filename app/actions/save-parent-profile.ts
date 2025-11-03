@@ -41,7 +41,13 @@ export async function saveParentProfile(params: SaveParentProfileParams) {
       .where(eq(students.parentId, parentId))
       .limit(1);
 
-    const dateOfBirth = params.dateOfBirth ? new Date(params.dateOfBirth) : null;
+    // Create date at UTC midnight to avoid timezone conversion
+    let dateOfBirth: Date | null = null;
+    if (params.dateOfBirth) {
+      // Parse YYYY-MM-DD and create UTC date
+      const [year, month, day] = params.dateOfBirth.split("-").map(Number);
+      dateOfBirth = new Date(Date.UTC(year, month - 1, day));
+    }
 
     if (existingStudents.length > 0) {
       // Update existing student entry (first child)

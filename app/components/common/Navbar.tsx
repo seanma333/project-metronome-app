@@ -30,27 +30,37 @@ export default function Navbar() {
             <span className="text-xl font-bold text-primary">TempoLink</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link
-              href="#features"
-              className="text-foreground/80 hover:text-primary transition-colors"
-            >
-              Features
-            </Link>
-            <Link
-              href="#how-it-works"
-              className="text-foreground/80 hover:text-primary transition-colors"
-            >
-              How It Works
-            </Link>
-            <Link
-              href="#faq"
-              className="text-foreground/80 hover:text-primary transition-colors"
-            >
-              FAQ
-            </Link>
-          </div>
+              {/* Desktop Navigation */}
+              <div className="hidden md:flex items-center space-x-8">
+                <SignedOut>
+                  <Link
+                    href="#features"
+                    className="text-foreground/80 hover:text-primary transition-colors"
+                  >
+                    Features
+                  </Link>
+                  <Link
+                    href="#how-it-works"
+                    className="text-foreground/80 hover:text-primary transition-colors"
+                  >
+                    How It Works
+                  </Link>
+                  <Link
+                    href="#faq"
+                    className="text-foreground/80 hover:text-primary transition-colors"
+                  >
+                    FAQ
+                  </Link>
+                </SignedOut>
+                <SignedIn>
+                  <Link
+                    href="/my-profile"
+                    className="text-foreground/80 hover:text-primary transition-colors"
+                  >
+                    My Profile
+                  </Link>
+                </SignedIn>
+              </div>
 
           {/* Desktop CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
@@ -77,47 +87,58 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden py-4 space-y-4">
-            <Link
-              href="#features"
-              className="block text-foreground/80 hover:text-primary transition-colors py-2"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Features
-            </Link>
-            <Link
-              href="#how-it-works"
-              className="block text-foreground/80 hover:text-primary transition-colors py-2"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              How It Works
-            </Link>
-            <Link
-              href="#faq"
-              className="block text-foreground/80 hover:text-primary transition-colors py-2"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              FAQ
-            </Link>
-            <div className="flex flex-col space-y-2 pt-4 border-t border-border">
-              <SignedOut>
-                <Button variant="ghost" asChild className="w-full">
-                  <Link href="/sign-in">Sign In</Link>
-                </Button>
-                <Button asChild className="w-full">
-                  <Link href="/sign-up">Get Started</Link>
-                </Button>
-              </SignedOut>
-              <SignedIn>
-                <div className="flex items-center justify-center py-2">
-                  <UserButton afterSignOutUrl="/" />
+            {/* Mobile Menu */}
+            {isMenuOpen && (
+              <div className="md:hidden py-4 space-y-4">
+                <SignedOut>
+                  <Link
+                    href="#features"
+                    className="block text-foreground/80 hover:text-primary transition-colors py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Features
+                  </Link>
+                  <Link
+                    href="#how-it-works"
+                    className="block text-foreground/80 hover:text-primary transition-colors py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    How It Works
+                  </Link>
+                  <Link
+                    href="#faq"
+                    className="block text-foreground/80 hover:text-primary transition-colors py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    FAQ
+                  </Link>
+                </SignedOut>
+                <SignedIn>
+                  <Link
+                    href="/my-profile"
+                    className="block text-foreground/80 hover:text-primary transition-colors py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    My Profile
+                  </Link>
+                </SignedIn>
+                <div className="flex flex-col space-y-2 pt-4 border-t border-border">
+                  <SignedOut>
+                    <Button variant="ghost" asChild className="w-full">
+                      <Link href="/sign-in">Sign In</Link>
+                    </Button>
+                    <Button asChild className="w-full">
+                      <Link href="/sign-up">Get Started</Link>
+                    </Button>
+                  </SignedOut>
+                  <SignedIn>
+                    <div className="flex items-center justify-center py-2">
+                      <UserButton afterSignOutUrl="/" />
+                    </div>
+                  </SignedIn>
                 </div>
-              </SignedIn>
-            </div>
-          </div>
-        )}
+              </div>
+            )}
       </div>
     </nav>
   );

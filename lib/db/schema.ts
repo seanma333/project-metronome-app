@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name", { length: 100 }), // Clerk first name
   lastName: varchar("last_name", { length: 100 }), // Clerk last name
   role: roleEnum("role"), // TEACHER, STUDENT, PARENT
+  imageUrl: varchar("image_url", { length: 255 }), // Profile image URL (for PARENT role users)
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
