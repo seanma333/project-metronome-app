@@ -77,6 +77,8 @@ export function SearchResults({
                   <Link
                     href={`/teachers/${result.profileName}`}
                     className="flex-shrink-0"
+                    target="_blank"
+                    rel="noopener noreferrer"
                   >
                     <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-2 border-primary/20 shadow-sm hover:border-primary/40 transition-colors">
                       <Image
@@ -94,6 +96,8 @@ export function SearchResults({
                     <Link
                       href={`/teachers/${result.profileName}`}
                       className="hover:underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
                       <h3 className="text-xl font-semibold mb-2">
                         {result.firstName} {result.lastName}
@@ -155,7 +159,7 @@ export function SearchResults({
                   </div>
                 </div>
                 <Button asChild variant="outline" className="flex-shrink-0">
-                  <Link href={`/teachers/${result.profileName}`}>View Profile</Link>
+                  <Link href={`/teachers/${result.profileName}`} target="_blank" rel="noopener noreferrer">View Profile</Link>
                 </Button>
               </div>
             </CardContent>
