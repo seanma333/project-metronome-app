@@ -9,6 +9,9 @@ export const teachingFormatEnum = pgEnum("teaching_format", ["IN_PERSON_ONLY", "
 // Age preference enum for teachers
 export const agePreferenceEnum = pgEnum("age_preference", ["ALL_AGES", "13+", "ADULTS_ONLY"]);
 
+// Booking status enum for booking requests
+export const bookingStatusEnum = pgEnum("booking_status", ["PENDING", "ACCEPTED", "DENIED", "CANCELLED"]);
+
 // PostGIS Geography type for spatial data
 const geography = customType<{ data: string; driverParam: string }>({
   dataType: () => 'geography(Point, 4326)',
@@ -70,6 +73,60 @@ export const teacherLanguages = pgTable("teacher_languages", {
 }, (table) => {
   return {
     uniqueTeacherLanguage: unique().on(table.teacherId, table.languageId),
+  };
+});
+
+// Teacher timeslots table - weekly recurring availability
+export const teacherTimeslots = pgTable("teacher_timeslots", {
+  id: uuid("id").primaryKey(),
+  teacherId: uuid("teacher_id")
+    .notNull()
+    .references(() => teachers.id, { onDelete: "cascade" }),
+  dayOfWeek: integer("day_of_week").notNull(), // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  startTime: varchar("start_time", { length: 8 }).notNull(), // Format: "HH:MM:SS" (e.g., "09:00:00")
+  endTime: varchar("end_time", { length: 8 }).notNull(), // Format: "HH:MM:SS" (e.g., "10:00:00")
+  isBooked: boolean("is_booked").default(false).notNull(),
+  studentId: uuid("student_id").references(() => students.id, { onDelete: "set null" }), // Nullable - only set when booked
+  teachingFormat: teachingFormatEnum("teaching_format").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Index for teacher lookups
+    teacherIdIdx: index("teacher_timeslots_teacher_id_idx").on(table.teacherId),
+    // Index for day of week queries
+    dayOfWeekIdx: index("teacher_timeslots_day_of_week_idx").on(table.dayOfWeek),
+    // Index for availability queries
+    isBookedIdx: index("teacher_timeslots_is_booked_idx").on(table.isBooked),
+    // Composite index for teacher availability queries
+    teacherAvailabilityIdx: index("teacher_timeslots_teacher_availability_idx").on(table.teacherId, table.dayOfWeek, table.isBooked),
+  };
+});
+
+// Booking requests table - for students to request timeslots
+export const bookingRequests = pgTable("booking_requests", {
+  id: uuid("id").primaryKey(),
+  timeslotId: uuid("timeslot_id")
+    .notNull()
+    .references(() => teacherTimeslots.id, { onDelete: "cascade" }),
+  studentId: uuid("student_id")
+    .notNull()
+    .references(() => students.id, { onDelete: "cascade" }),
+  bookingStatus: bookingStatusEnum("booking_status").default("PENDING").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Index for timeslot lookups
+    timeslotIdIdx: index("booking_requests_timeslot_id_idx").on(table.timeslotId),
+    // Index for student lookups
+    studentIdIdx: index("booking_requests_student_id_idx").on(table.studentId),
+    // Index for status queries
+    statusIdx: index("booking_requests_status_idx").on(table.bookingStatus),
+    // Composite index for student's booking history
+    studentStatusIdx: index("booking_requests_student_status_idx").on(table.studentId, table.bookingStatus),
+    // Ensure one request per student per timeslot
+    uniqueStudentTimeslot: unique().on(table.studentId, table.timeslotId),
   };
 });
 

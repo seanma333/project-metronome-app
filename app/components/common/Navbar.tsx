@@ -17,6 +17,7 @@ export default function Navbar() {
   const { user } = useUser();
   const role = (user?.publicMetadata?.role as string | undefined) || undefined;
   const canFindTeacher = role === "STUDENT" || role === "PARENT";
+  const isTeacher = role === "TEACHER";
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border">
@@ -75,6 +76,14 @@ export default function Navbar() {
                       className="text-foreground/80 hover:text-primary transition-colors"
                     >
                       Find Teacher
+                    </Link>
+                  )}
+                  {isTeacher && (
+                    <Link
+                      href="/my-timeslots"
+                      className="text-foreground/80 hover:text-primary transition-colors"
+                    >
+                      Timeslots
                     </Link>
                   )}
                 </SignedIn>
@@ -153,6 +162,15 @@ export default function Navbar() {
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Find Teacher
+                    </Link>
+                  )}
+                  {isTeacher && (
+                    <Link
+                      href="/my-timeslots"
+                      className="block text-foreground/80 hover:text-primary transition-colors py-2"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Timeslots
                     </Link>
                   )}
                 </SignedIn>

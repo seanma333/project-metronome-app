@@ -6,6 +6,7 @@ import { Label } from "@/app/components/ui/label";
 import { Input } from "@/app/components/ui/input";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Button } from "@/app/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/app/components/ui/radio-group";
 import Image from "next/image";
 import { saveTeacherProfile } from "@/app/actions/save-teacher-profile";
 import { getInstruments, getLanguages } from "@/app/actions/get-instruments-languages";
@@ -28,6 +29,7 @@ export default function TeacherForm({ firstName: defaultFirstName, lastName: def
   const [selectedLanguages, setSelectedLanguages] = useState<number[]>([]);
   const [instruments, setInstruments] = useState<Array<{ id: number; name: string; imagePath: string }>>([]);
   const [languages, setLanguages] = useState<Array<{ id: number; name: string; code: string }>>([]);
+  const [timeslotCreation, setTimeslotCreation] = useState<"auto" | "manual">("auto");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,6 +110,7 @@ export default function TeacherForm({ firstName: defaultFirstName, lastName: def
         bio: bio.trim() || undefined,
         instrumentIds: selectedInstruments,
         languageIds: selectedLanguages,
+        createTimeslotsAutomatically: timeslotCreation === "auto",
       });
 
       if (result.error) {
@@ -252,6 +255,34 @@ export default function TeacherForm({ firstName: defaultFirstName, lastName: def
         <p className="text-xs text-muted-foreground">
           Your profile URL will be: /profile/{profileName || "..."}
         </p>
+      </div>
+
+      {/* Timeslot Creation Option */}
+      <div className="space-y-3">
+        <Label>Booking Timeslots</Label>
+        <RadioGroup
+          value={timeslotCreation}
+          onValueChange={(value) => setTimeslotCreation(value as "auto" | "manual")}
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="auto" id="auto-timeslots" />
+            <Label htmlFor="auto-timeslots" className="font-normal cursor-pointer">
+              Create timeslots automatically (45-minute slots every hour from 9am-8pm)
+              <span className="block text-xs text-muted-foreground mt-1">
+                You can edit these later
+              </span>
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="manual" id="manual-timeslots" />
+            <Label htmlFor="manual-timeslots" className="font-normal cursor-pointer">
+              Create timeslots manually
+              <span className="block text-xs text-muted-foreground mt-1">
+                You can add timeslots later
+              </span>
+            </Label>
+          </div>
+        </RadioGroup>
       </div>
 
       {/* Save Button */}

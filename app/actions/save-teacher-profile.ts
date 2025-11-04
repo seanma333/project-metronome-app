@@ -2,8 +2,9 @@
 
 import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { users, teachers, teacherInstruments, teacherLanguages } from "@/lib/db/schema";
+import { users, teachers, teacherInstruments, teacherLanguages, teacherTimeslots } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { randomUUID } from "crypto";
 
 interface SaveTeacherProfileParams {
   firstName: string;
@@ -11,6 +12,7 @@ interface SaveTeacherProfileParams {
   bio?: string;
   instrumentIds: number[];
   languageIds: number[];
+  createTimeslotsAutomatically?: boolean;
 }
 
 export async function saveTeacherProfile(params: SaveTeacherProfileParams) {
@@ -87,6 +89,44 @@ export async function saveTeacherProfile(params: SaveTeacherProfileParams) {
           languageId,
         }))
       );
+    }
+
+    // Create timeslots automatically if requested
+    if (params.createTimeslotsAutomatically) {
+      // Get teacher's teaching format (default to ONLINE_ONLY if not set)
+      const teacherRecord = await db
+        .select()
+        .from(teachers)
+        .where(eq(teachers.id, userId))
+        .limit(1);
+
+      const teachingFormat = teacherRecord[0]?.teachingFormat || "ONLINE_ONLY";
+
+      // Create 45-minute timeslots every hour from 9am to 8pm (9:00 to 20:00)
+      // For all 7 days of the week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+      const timeslots = [];
+
+      for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+        for (let hour = 9; hour < 20; hour++) {
+          const startTime = `${hour.toString().padStart(2, "0")}:00:00`;
+          const endTime = `${hour.toString().padStart(2, "0")}:45:00`;
+
+          timeslots.push({
+            id: randomUUID(),
+            teacherId: userId,
+            dayOfWeek,
+            startTime,
+            endTime,
+            isBooked: false,
+            studentId: null,
+            teachingFormat,
+          });
+        }
+      }
+
+      if (timeslots.length > 0) {
+        await db.insert(teacherTimeslots).values(timeslots);
+      }
     }
 
     return { success: true, profileName };
