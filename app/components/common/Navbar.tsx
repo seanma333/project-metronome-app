@@ -65,6 +65,18 @@ export default function Navbar() {
                     {role === "PARENT" ? "Student Profiles" : "My Profile"}
                   </Link>
                   <Link
+                    href="/booking-requests"
+                    className="text-foreground/80 hover:text-primary transition-colors"
+                  >
+                    Booking Requests
+                  </Link>
+                  <Link
+                    href="/lessons"
+                    className="text-foreground/80 hover:text-primary transition-colors"
+                  >
+                    Lessons
+                  </Link>
+                  <Link
                     href="/my-preferences"
                     className="text-foreground/80 hover:text-primary transition-colors"
                   >
@@ -147,6 +159,20 @@ export default function Navbar() {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {role === "PARENT" ? "Student Profiles" : "My Profile"}
+                  </Link>
+                  <Link
+                    href="/booking-requests"
+                    className="block text-foreground/80 hover:text-primary transition-colors py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Booking Requests
+                  </Link>
+                  <Link
+                    href="/lessons"
+                    className="block text-foreground/80 hover:text-primary transition-colors py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Lessons
                   </Link>
                   <Link
                     href="/my-preferences"

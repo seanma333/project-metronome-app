@@ -356,7 +356,8 @@ export default function RequestBookingContent({
     try {
       // For parent users, pass the selected child's ID
       const studentId = children.length > 1 ? selectedChild : undefined;
-      const result = await createBookingRequest(selectedTimeslot, studentId, currentInstrument);
+      const lessonFormat = selectedFormat === "online" ? "ONLINE" : "IN_PERSON";
+      const result = await createBookingRequest(selectedTimeslot, studentId, currentInstrument, lessonFormat);
 
       if (result.error) {
         alert(result.error);

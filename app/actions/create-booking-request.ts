@@ -6,7 +6,12 @@ import { users, students, bookingRequests, teacherTimeslots, instruments } from 
 import { eq, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
-export async function createBookingRequest(timeslotId: string, studentId?: string, instrument?: string) {
+export async function createBookingRequest(
+  timeslotId: string,
+  studentId: string | undefined,
+  instrument: string | undefined,
+  lessonFormat: "IN_PERSON" | "ONLINE"
+) {
   try {
     const clerkUser = await currentUser();
 
@@ -147,6 +152,7 @@ export async function createBookingRequest(timeslotId: string, studentId?: strin
       timeslotId: timeslotId,
       studentId: finalStudentId,
       instrumentId: instrumentId,
+      lessonFormat: lessonFormat,
       bookingStatus: "PENDING",
       createdAt: now,
       updatedAt: now,

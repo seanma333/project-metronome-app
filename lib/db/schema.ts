@@ -12,6 +12,12 @@ export const agePreferenceEnum = pgEnum("age_preference", ["ALL_AGES", "13+", "A
 // Booking status enum for booking requests
 export const bookingStatusEnum = pgEnum("booking_status", ["PENDING", "ACCEPTED", "DENIED", "CANCELLED"]);
 
+// Lesson format enum for booking requests and lessons
+export const lessonFormatEnum = pgEnum("lesson_format", ["IN_PERSON", "ONLINE"]);
+
+// Proficiency level enum for student instrument proficiency
+export const proficiencyEnum = pgEnum("proficiency_level", ["BEGINNER", "INTERMEDIATE", "ADVANCED"]);
+
 // PostGIS Geography type for spatial data
 const geography = customType<{ data: string; driverParam: string }>({
   dataType: () => 'geography(Point, 4326)',
@@ -115,6 +121,7 @@ export const bookingRequests = pgTable("booking_requests", {
   instrumentId: integer("instrument_id")
     .notNull()
     .references(() => instruments.id, { onDelete: "restrict" }),
+  lessonFormat: lessonFormatEnum("lesson_format").notNull(),
   bookingStatus: bookingStatusEnum("booking_status").default("PENDING").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -126,6 +133,8 @@ export const bookingRequests = pgTable("booking_requests", {
     studentIdIdx: index("booking_requests_student_id_idx").on(table.studentId),
     // Index for instrument lookups
     instrumentIdIdx: index("booking_requests_instrument_id_idx").on(table.instrumentId),
+    // Index for lesson format queries
+    lessonFormatIdx: index("booking_requests_lesson_format_idx").on(table.lessonFormat),
     // Index for status queries
     statusIdx: index("booking_requests_status_idx").on(table.bookingStatus),
     // Composite index for student's booking history
@@ -150,6 +159,7 @@ export const lessons = pgTable("lessons", {
   instrumentId: integer("instrument_id")
     .notNull()
     .references(() => instruments.id, { onDelete: "restrict" }),
+  lessonFormat: lessonFormatEnum("lesson_format").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
@@ -162,8 +172,29 @@ export const lessons = pgTable("lessons", {
     studentIdIdx: index("lessons_student_id_idx").on(table.studentId),
     // Index for instrument lookups
     instrumentIdIdx: index("lessons_instrument_id_idx").on(table.instrumentId),
+    // Index for lesson format queries
+    lessonFormatIdx: index("lessons_lesson_format_idx").on(table.lessonFormat),
     // Ensure one lesson per timeslot
     uniqueTimeslot: unique().on(table.timeslotId),
+  };
+});
+
+// Lesson notes table - teacher's notes for a particular lesson on a particular day
+export const lessonNotes = pgTable("lesson_notes", {
+  id: uuid("id").primaryKey(),
+  lessonId: uuid("lesson_id")
+    .notNull()
+    .references(() => lessons.id, { onDelete: "cascade" }),
+  noteTitle: varchar("note_title", { length: 255 }), // Title for the note (optional, for organization)
+  notes: text("notes").notNull(), // Large text field for detailed notes
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Index for lesson lookups (to get all notes for a lesson)
+    lessonIdIdx: index("lesson_notes_lesson_id_idx").on(table.lessonId),
+    // Index for date-based queries (to get notes by creation date)
+    createdAtIdx: index("lesson_notes_created_at_idx").on(table.createdAt),
   };
 });
 
@@ -187,6 +218,31 @@ export const students = pgTable("students", {
     check: `("user_id" IS NOT NULL OR "parent_id" IS NOT NULL)`,
   },
 }));
+
+// Student instrument proficiency table - tracks proficiency level for each instrument per student
+export const studentInstrumentProficiency = pgTable("student_instrument_proficiency", {
+  id: serial("id").primaryKey(),
+  studentId: uuid("student_id")
+    .notNull()
+    .references(() => students.id, { onDelete: "cascade" }),
+  instrumentId: integer("instrument_id")
+    .notNull()
+    .references(() => instruments.id, { onDelete: "cascade" }),
+  proficiency: proficiencyEnum("proficiency").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Ensure one proficiency entry per student per instrument
+    uniqueStudentInstrument: unique().on(table.studentId, table.instrumentId),
+    // Index for student lookups
+    studentIdIdx: index("student_instrument_proficiency_student_id_idx").on(table.studentId),
+    // Index for instrument lookups
+    instrumentIdIdx: index("student_instrument_proficiency_instrument_id_idx").on(table.instrumentId),
+    // Index for proficiency queries
+    proficiencyIdx: index("student_instrument_proficiency_proficiency_idx").on(table.proficiency),
+  };
+});
 
 // Instruments table
 export const instruments = pgTable("instruments", {

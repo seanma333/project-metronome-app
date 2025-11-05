@@ -43,6 +43,27 @@
       "when": 1762294709758,
       "tag": "0005_colorful_exodus",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1762302555486,
+      "tag": "0006_loose_magneto",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1762310313645,
+      "tag": "0007_blue_turbo",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1762313952470,
+      "tag": "0008_fresh_swordsman",
+      "breakpoints": true
     }
   ]
 }
