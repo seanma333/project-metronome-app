@@ -35,6 +35,7 @@ export const users = pgTable("users", {
   preferredTimezone: varchar("preferred_timezone", { length: 50 }), // User's preferred timezone (e.g., "America/New_York")
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  isDeleted: boolean("is_deleted").default(false),
 });
 
 // Teachers table

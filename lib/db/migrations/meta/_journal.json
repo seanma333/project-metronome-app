@@ -64,6 +64,13 @@
       "when": 1762313952470,
       "tag": "0008_fresh_swordsman",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1762324732731,
+      "tag": "0009_complex_whistler",
+      "breakpoints": true
     }
   ]
 }

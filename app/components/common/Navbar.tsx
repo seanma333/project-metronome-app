@@ -112,7 +112,10 @@ export default function Navbar() {
               </Button>
             </SignedOut>
             <SignedIn>
-              <UserButton afterSignOutUrl="/" />
+              <UserButton
+                afterSignOutUrl="/"
+                userProfileUrl="/my-account"
+              />
             </SignedIn>
           </div>
 
@@ -211,7 +214,10 @@ export default function Navbar() {
                   </SignedOut>
                   <SignedIn>
                     <div className="flex items-center justify-center py-2">
-                      <UserButton afterSignOutUrl="/" />
+                      <UserButton
+                        afterSignOutUrl="/"
+                        userProfileUrl="/my-account"
+                      />
                     </div>
                   </SignedIn>
                 </div>

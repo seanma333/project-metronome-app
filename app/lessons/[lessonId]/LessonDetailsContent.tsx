@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/app/components/ui/alert-dialog";
 import { ArrowLeft } from "lucide-react";
 import { createLessonNote, updateLessonNote, getLessonNote, deleteLessonNote } from "@/app/actions/manage-lesson-notes";
 import NoteDialog from "../NoteDialog";
@@ -108,11 +109,6 @@ export default function LessonDetailsContent({ lesson, user }: LessonDetailsCont
 
   const handleDeleteNote = async (noteId: string) => {
     if (deletingNotes.has(noteId)) return;
-
-    // Confirm deletion
-    if (!confirm("Are you sure you want to delete this note? This action cannot be undone.")) {
-      return;
-    }
 
     setDeletingNotes(prev => new Set(prev).add(noteId));
 
@@ -277,22 +273,42 @@ export default function LessonDetailsContent({ lesson, user }: LessonDetailsCont
                             />
                             Edit
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteNote(note.id)}
-                            disabled={deletingNotes.has(note.id)}
-                            className="flex items-center gap-2 text-destructive hover:text-destructive"
-                          >
-                            <Image
-                              src="/svg/delete_button.svg"
-                              alt="Delete"
-                              width={16}
-                              height={16}
-                              className="w-4 h-4"
-                            />
-                            {deletingNotes.has(note.id) ? "Deleting..." : "Delete"}
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={deletingNotes.has(note.id)}
+                                className="flex items-center gap-2 text-destructive hover:text-destructive"
+                              >
+                                <Image
+                                  src="/svg/delete_button.svg"
+                                  alt="Delete"
+                                  width={16}
+                                  height={16}
+                                  className="w-4 h-4"
+                                />
+                                {deletingNotes.has(note.id) ? "Deleting..." : "Delete"}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Note</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this note? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteNote(note.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete Note
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       )}
                     </div>

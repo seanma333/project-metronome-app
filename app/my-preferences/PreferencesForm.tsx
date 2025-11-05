@@ -9,6 +9,7 @@ import { Label } from "@/app/components/ui/label";
 import { Checkbox } from "@/app/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/app/components/ui/radio-group";
 import { Button } from "@/app/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/app/components/ui/alert-dialog";
 import { Input } from "@/app/components/ui/input";
 import { StateSelect } from "@/app/components/ui/state-select";
 import { updatePreferredTimezone } from "@/app/actions/update-user-preferences";
@@ -212,10 +213,6 @@ export default function PreferencesForm({
 
   // Remove teacher address
   const handleRemoveTeacherAddress = async (addressId: string) => {
-    if (!confirm("Are you sure you want to remove this address?")) {
-      return;
-    }
-
     const result = await unlinkUserFromAddress(addressId);
     if (result.error) {
       alert("Failed to remove address");
@@ -257,10 +254,6 @@ export default function PreferencesForm({
   // Remove student/parent address
   const handleRemoveStudentAddress = async () => {
     if (!studentAddressId) return;
-
-    if (!confirm("Are you sure you want to remove your address?")) {
-      return;
-    }
 
     const result = await unlinkUserFromAddress(studentAddressId);
     if (result.error) {
@@ -403,13 +396,30 @@ export default function PreferencesForm({
                     {addr.data.postalCode && ` ${addr.data.postalCode}`}
                     {addr.data.country && `, ${addr.data.country}`}
                   </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleRemoveTeacherAddress(addr.id)}
-                  >
-                    Remove
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        Remove
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remove Address</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to remove this address? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleRemoveTeacherAddress(addr.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Remove Address
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               ))}
 
@@ -561,9 +571,30 @@ export default function PreferencesForm({
                   }}>
                     Edit Address
                   </Button>
-                  <Button variant="destructive" size="sm" onClick={handleRemoveStudentAddress}>
-                    Remove Address
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        Remove Address
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remove Address</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to remove your address? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleRemoveStudentAddress}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Remove Address
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             ) : (

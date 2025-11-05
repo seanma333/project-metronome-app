@@ -8,6 +8,7 @@ import ProfileSection from "./ProfileSection";
 import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/app/components/ui/alert-dialog";
 import { updateTeacherName } from "@/app/actions/update-teacher-name";
 import {
   addParentStudent,
@@ -64,6 +65,10 @@ export default function EditableParentProfile({
   const [editingProficienciesFor, setEditingProficienciesFor] = useState<string | null>(null);
   const [addingProficiencyFor, setAddingProficiencyFor] = useState<string | null>(null);
   const [newProficiencies, setNewProficiencies] = useState<Record<string, { instrumentId: number | null; proficiency: ProficiencyLevel }>>({});
+
+  // Alert dialog state
+  const [studentToRemove, setStudentToRemove] = useState<string | null>(null);
+  const [proficiencyToRemove, setProficiencyToRemove] = useState<{studentId: string, instrumentId: number} | null>(null);
 
   useEffect(() => {
     setFirstName(initialUser.firstName || "");
@@ -263,16 +268,13 @@ export default function EditableParentProfile({
   };
 
   const handleRemoveStudent = async (studentId: string) => {
-    if (!confirm("Are you sure you want to remove this student profile?")) {
-      return;
-    }
-
     try {
       const result = await removeParentStudent(studentId);
       if (result.error) {
         console.error("Error removing student:", result.error);
         alert("Failed to remove student");
       } else {
+        setStudentToRemove(null);
         router.refresh();
       }
     } catch (err) {
@@ -341,10 +343,6 @@ export default function EditableParentProfile({
   };
 
   const handleRemoveProficiency = async (studentId: string, instrumentId: number) => {
-    if (!confirm("Are you sure you want to remove this instrument proficiency?")) {
-      return;
-    }
-
     try {
       const result = await removeStudentInstrumentProficiency(studentId, instrumentId);
 
@@ -359,6 +357,7 @@ export default function EditableParentProfile({
             [studentId]: proficienciesResult.proficiencies,
           });
         }
+        setProficiencyToRemove(null);
       }
     } catch (err) {
       console.error("Error removing proficiency:", err);
@@ -558,19 +557,39 @@ export default function EditableParentProfile({
                         className="object-contain"
                       />
                     </button>
-                    <button
-                      onClick={() => handleRemoveStudent(student.id)}
-                      className="p-2 hover:bg-destructive/10 rounded transition-colors"
-                      aria-label="Remove student"
-                    >
-                      <Image
-                        src="/svg/delete_button.svg"
-                        alt="Delete"
-                        width={20}
-                        height={20}
-                        className="object-contain"
-                      />
-                    </button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button
+                          className="p-2 hover:bg-destructive/10 rounded transition-colors"
+                          aria-label="Remove student"
+                        >
+                          <Image
+                            src="/svg/delete_button.svg"
+                            alt="Delete"
+                            width={20}
+                            height={20}
+                            className="object-contain"
+                          />
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remove Student Profile</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to remove this student profile? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleRemoveStudent(student.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Remove Student
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
 
@@ -625,20 +644,40 @@ export default function EditableParentProfile({
                                   <SelectItem value="ADVANCED">Advanced</SelectItem>
                                 </SelectContent>
                               </Select>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveProficiency(student.id, prof.instrument.id)}
-                                className="h-8 px-2"
-                              >
-                                <Image
-                                  src="/svg/delete_button.svg"
-                                  alt="Remove"
-                                  width={16}
-                                  height={16}
-                                  className="object-contain"
-                                />
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 px-2"
+                                  >
+                                    <Image
+                                      src="/svg/delete_button.svg"
+                                      alt="Remove"
+                                      width={16}
+                                      height={16}
+                                      className="object-contain"
+                                    />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Remove Instrument Proficiency</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to remove this instrument proficiency? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleRemoveProficiency(student.id, prof.instrument.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Remove Proficiency
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           ))
                         ) : (

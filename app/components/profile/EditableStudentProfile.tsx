@@ -8,6 +8,7 @@ import ProfileSection from "./ProfileSection";
 import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/app/components/ui/alert-dialog";
 import { updateStudentName, updateStudentDateOfBirth } from "@/app/actions/update-student-profile";
 import { updateStudentImageUrl } from "@/app/actions/update-student-image";
 import { getInstruments } from "@/app/actions/get-instruments-languages";
@@ -228,10 +229,6 @@ export default function EditableStudentProfile({
   };
 
   const handleRemoveProficiency = async (instrumentId: number) => {
-    if (!confirm("Are you sure you want to remove this instrument proficiency?")) {
-      return;
-    }
-
     try {
       const result = await removeStudentInstrumentProficiency(
         initialStudent.id,
@@ -541,20 +538,40 @@ export default function EditableStudentProfile({
                           <SelectItem value="ADVANCED">Advanced</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveProficiency(prof.instrument.id)}
-                        className="h-8 px-2"
-                      >
-                        <Image
-                          src="/svg/delete_button.svg"
-                          alt="Remove"
-                          width={16}
-                          height={16}
-                          className="object-contain"
-                        />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2"
+                          >
+                            <Image
+                              src="/svg/delete_button.svg"
+                              alt="Remove"
+                              width={16}
+                              height={16}
+                              className="object-contain"
+                            />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remove Instrument Proficiency</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to remove this instrument proficiency? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleRemoveProficiency(prof.instrument.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Remove Proficiency
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   ))
                 ) : (
