@@ -68,7 +68,7 @@ interface SearchFormProps {
   defaultAge: number;
   studentProfile: { dateOfBirth: string | null } | null;
   parentStudents: Student[] | null;
-  onSearchResults: (results: SearchResult[], error?: string, teachingType?: "in-person" | "online") => void;
+  onSearchResults: (results: SearchResult[], error?: string, teachingType?: "in-person" | "online", selectedInstrumentName?: string) => void;
   onSearchStart?: () => void;
 }
 
@@ -244,12 +244,19 @@ export function SearchForm({
       };
 
       const result = await searchTeachers(searchParams);
+      console.log(result);
+
+      // Get the selected instrument name
+      const selectedInstrumentObj = instruments.find(
+        (inst) => inst.id.toString() === selectedInstrument
+      );
+      const selectedInstrumentName = selectedInstrumentObj?.name;
 
       if (result.error) {
         onSearchResults([], result.error);
       } else {
-        // Pass teaching type along with results
-        onSearchResults(result.results, undefined, teachingType);
+        // Pass teaching type and selected instrument name along with results
+        onSearchResults(result.results, undefined, teachingType, selectedInstrumentName);
       }
 
       // Write query parameters to URL (without navigating away)

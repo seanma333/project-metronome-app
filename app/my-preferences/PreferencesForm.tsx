@@ -19,6 +19,7 @@ import {
 } from "@/app/actions/update-teacher-preferences";
 import { addAddress } from "@/app/actions/add-address";
 import { linkUserToAddress, unlinkUserFromAddress } from "@/app/actions/link-user-address";
+import { getTimezoneDisplayName } from "@/lib/timezone-utils";
 
 interface PreferencesFormProps {
   preferences: {
@@ -61,7 +62,7 @@ export default function PreferencesForm({
   // Timezone state - initialize with saved preference, set browser timezone on client only
   const [selectedTimezone, setSelectedTimezone] = useState(() => {
     const tz = preferences.user.preferredTimezone || currentTimezone || "UTC";
-    return { value: tz, label: tz };
+    return { value: tz, label: getTimezoneDisplayName(tz) };
   });
   const [isClient, setIsClient] = useState(false);
 
@@ -70,7 +71,11 @@ export default function PreferencesForm({
     setIsClient(true);
     if (!preferences.user.preferredTimezone && !currentTimezone) {
       const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      setSelectedTimezone({ value: browserTimezone, label: browserTimezone });
+      setSelectedTimezone({ value: browserTimezone, label: getTimezoneDisplayName(browserTimezone) });
+    } else {
+      // Update label with display name
+      const tz = preferences.user.preferredTimezone || currentTimezone || "UTC";
+      setSelectedTimezone({ value: tz, label: getTimezoneDisplayName(tz) });
     }
   }, [preferences.user.preferredTimezone, currentTimezone]);
 
@@ -281,7 +286,13 @@ export default function PreferencesForm({
             {isClient ? (
               <TimezoneSelect
                 value={selectedTimezone}
-                onChange={(tz) => setSelectedTimezone(tz as { value: string; label: string })}
+                onChange={(tz) => {
+                  const timezoneValue = (tz as { value: string; label: string }).value;
+                  setSelectedTimezone({
+                    value: timezoneValue,
+                    label: getTimezoneDisplayName(timezoneValue)
+                  });
+                }}
                 className="w-full"
               />
             ) : (

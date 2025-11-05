@@ -57,6 +57,7 @@ export function SearchPageContent({
   const [error, setError] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   const [teachingType, setTeachingType] = useState<"in-person" | "online">("in-person");
+  const [selectedInstrumentName, setSelectedInstrumentName] = useState<string | undefined>();
 
   const handleSearchStart = () => {
     setIsLoading(true);
@@ -66,7 +67,8 @@ export function SearchPageContent({
   const handleSearchResults = (
     newResults: SearchResult[],
     newError?: string,
-    newTeachingType?: "in-person" | "online"
+    newTeachingType?: "in-person" | "online",
+    newSelectedInstrumentName?: string
   ) => {
     setResults(newResults);
     setError(newError);
@@ -74,6 +76,10 @@ export function SearchPageContent({
     // Update teaching type if provided
     if (newTeachingType) {
       setTeachingType(newTeachingType);
+    }
+    // Update selected instrument name if provided
+    if (newSelectedInstrumentName !== undefined) {
+      setSelectedInstrumentName(newSelectedInstrumentName);
     }
   };
 
@@ -102,6 +108,7 @@ export function SearchPageContent({
             teachingType={teachingType}
             isLoading={isLoading}
             error={error}
+            selectedInstrumentName={selectedInstrumentName}
           />
         </div>
       </div>

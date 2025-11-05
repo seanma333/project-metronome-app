@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { currentUser } from "@clerk/nextjs/server";
 import { getTeacherByProfileName } from "@/app/actions/get-teacher-profile";
 import Navbar from "@/app/components/common/Navbar";
 import Footer from "@/app/components/common/Footer";
@@ -6,6 +7,8 @@ import TeacherProfileInfo from "@/app/components/profile/TeacherProfileInfo";
 import ProfileSection from "@/app/components/profile/ProfileSection";
 import InstrumentBadge from "@/app/components/profile/InstrumentBadge";
 import LanguageBadge from "@/app/components/profile/LanguageBadge";
+import { Button } from "@/app/components/ui/button";
+import Link from "next/link";
 
 interface TeacherProfilePageProps {
   params: Promise<{ profileName: string }>;
@@ -20,6 +23,11 @@ export default async function TeacherProfilePage({
   if (!teacher) {
     notFound();
   }
+
+  // Check if user is logged in and is a STUDENT or PARENT
+  const user = await currentUser();
+  const role = user?.publicMetadata?.role as string | undefined;
+  const canBookLesson = user && (role === "STUDENT" || role === "PARENT");
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -36,6 +44,15 @@ export default async function TeacherProfilePage({
                   lastName={teacher.user.lastName}
                   email={teacher.user.email}
                 />
+                {canBookLesson && (
+                  <div className="mt-6">
+                    <Button asChild className="w-full" size="lg">
+                      <Link href={`/teachers/${teacher.id}/request-booking`}>
+                        Book a Lesson
+                      </Link>
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Right Side - Bio, Instruments, Languages */}

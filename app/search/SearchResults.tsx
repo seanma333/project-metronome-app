@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import InstrumentBadge from "@/app/components/profile/InstrumentBadge";
 import LanguageBadge from "@/app/components/profile/LanguageBadge";
+import { getTimezoneDisplayName } from "@/lib/timezone-utils";
 
 export interface SearchResult {
   teacherId: string;
@@ -25,6 +26,7 @@ interface SearchResultsProps {
   teachingType: "in-person" | "online";
   isLoading?: boolean;
   error?: string;
+  selectedInstrumentName?: string;
 }
 
 export function SearchResults({
@@ -32,6 +34,7 @@ export function SearchResults({
   teachingType,
   isLoading,
   error,
+  selectedInstrumentName,
 }: SearchResultsProps) {
   if (isLoading) {
     return (
@@ -75,7 +78,7 @@ export function SearchResults({
                 <div className="flex gap-4 flex-1">
                   {/* Teacher Image */}
                   <Link
-                    href={`/teachers/${result.profileName}`}
+                    href={`/teacher-profiles/${result.profileName}`}
                     className="flex-shrink-0"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -94,7 +97,7 @@ export function SearchResults({
                   {/* Teacher Info */}
                   <div className="flex-1 min-w-0">
                     <Link
-                      href={`/teachers/${result.profileName}`}
+                      href={`/teacher-profiles/${result.profileName}`}
                       className="hover:underline"
                       target="_blank"
                       rel="noopener noreferrer"
@@ -152,15 +155,28 @@ export function SearchResults({
                       {teachingType === "online" && result.timezone && (
                         <div>
                           <span className="font-medium">Timezone:</span>{" "}
-                          {result.timezone}
+                          {getTimezoneDisplayName(result.timezone)}
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
-                <Button asChild variant="outline" className="flex-shrink-0">
-                  <Link href={`/teachers/${result.profileName}`} target="_blank" rel="noopener noreferrer">View Profile</Link>
-                </Button>
+                <div className="flex flex-col gap-2 flex-shrink-0">
+                  <Button asChild variant="outline" className="w-full">
+                    <Link href={`/teacher-profiles/${result.profileName}`} target="_blank" rel="noopener noreferrer">
+                      View Profile
+                    </Link>
+                  </Button>
+                  {selectedInstrumentName && (
+                    <Button asChild className="w-full">
+                      <Link
+                        href={`/teachers/${result.teacherId}/request-booking?format=${teachingType}&instrument=${encodeURIComponent(selectedInstrumentName)}`}
+                      >
+                        Book a Lesson
+                      </Link>
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

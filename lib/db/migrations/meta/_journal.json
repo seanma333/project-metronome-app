@@ -36,6 +36,13 @@
       "when": 1762221188902,
       "tag": "0004_nifty_puppet_master",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1762294709758,
+      "tag": "0005_colorful_exodus",
+      "breakpoints": true
     }
   ]
 }

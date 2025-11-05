@@ -112,6 +112,9 @@ export const bookingRequests = pgTable("booking_requests", {
   studentId: uuid("student_id")
     .notNull()
     .references(() => students.id, { onDelete: "cascade" }),
+  instrumentId: integer("instrument_id")
+    .notNull()
+    .references(() => instruments.id, { onDelete: "restrict" }),
   bookingStatus: bookingStatusEnum("booking_status").default("PENDING").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -121,12 +124,46 @@ export const bookingRequests = pgTable("booking_requests", {
     timeslotIdIdx: index("booking_requests_timeslot_id_idx").on(table.timeslotId),
     // Index for student lookups
     studentIdIdx: index("booking_requests_student_id_idx").on(table.studentId),
+    // Index for instrument lookups
+    instrumentIdIdx: index("booking_requests_instrument_id_idx").on(table.instrumentId),
     // Index for status queries
     statusIdx: index("booking_requests_status_idx").on(table.bookingStatus),
     // Composite index for student's booking history
     studentStatusIdx: index("booking_requests_student_status_idx").on(table.studentId, table.bookingStatus),
     // Ensure one request per student per timeslot
     uniqueStudentTimeslot: unique().on(table.studentId, table.timeslotId),
+  };
+});
+
+// Lessons table - for successfully scheduled weekly one-on-one lessons
+export const lessons = pgTable("lessons", {
+  id: uuid("id").primaryKey(),
+  teacherId: uuid("teacher_id")
+    .notNull()
+    .references(() => teachers.id, { onDelete: "cascade" }),
+  timeslotId: uuid("timeslot_id")
+    .notNull()
+    .references(() => teacherTimeslots.id, { onDelete: "cascade" }),
+  studentId: uuid("student_id")
+    .notNull()
+    .references(() => students.id, { onDelete: "cascade" }),
+  instrumentId: integer("instrument_id")
+    .notNull()
+    .references(() => instruments.id, { onDelete: "restrict" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Index for teacher lookups
+    teacherIdIdx: index("lessons_teacher_id_idx").on(table.teacherId),
+    // Index for timeslot lookups
+    timeslotIdIdx: index("lessons_timeslot_id_idx").on(table.timeslotId),
+    // Index for student lookups
+    studentIdIdx: index("lessons_student_id_idx").on(table.studentId),
+    // Index for instrument lookups
+    instrumentIdIdx: index("lessons_instrument_id_idx").on(table.instrumentId),
+    // Ensure one lesson per timeslot
+    uniqueTimeslot: unique().on(table.timeslotId),
   };
 });
 

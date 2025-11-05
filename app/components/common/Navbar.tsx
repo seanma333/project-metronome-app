@@ -62,7 +62,7 @@ export default function Navbar() {
                     href="/my-profile"
                     className="text-foreground/80 hover:text-primary transition-colors"
                   >
-                    My Profile
+                    {role === "PARENT" ? "Student Profiles" : "My Profile"}
                   </Link>
                   <Link
                     href="/my-preferences"
@@ -146,7 +146,7 @@ export default function Navbar() {
                     className="block text-foreground/80 hover:text-primary transition-colors py-2"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    My Profile
+                    {role === "PARENT" ? "Student Profiles" : "My Profile"}
                   </Link>
                   <Link
                     href="/my-preferences"

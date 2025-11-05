@@ -377,7 +377,7 @@ export default function EditableTeacherProfile({
 
         <div className="text-center">
           <Link
-            href={`/teachers/${initialTeacher.profileName}`}
+            href={`/teacher-profiles/${initialTeacher.profileName}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary hover:text-primary/80 underline text-sm transition-colors"
