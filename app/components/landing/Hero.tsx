@@ -1,9 +1,80 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Music, Users, Calendar } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 
 export default function Hero() {
+  const { user, isLoaded } = useUser();
+  const role = user?.publicMetadata?.role as string | undefined;
+
+  // Render buttons based on user role
+  const renderButtons = () => {
+    // If user is not loaded or not logged in, show default buttons
+    if (!isLoaded || !user) {
+      return (
+        <>
+          <Button size="lg" asChild className="text-lg px-8">
+            <Link href="/search">Find a Teacher</Link>
+          </Button>
+          <Button size="lg" variant="outline" asChild className="text-lg px-8">
+            <Link href="/signup?role=teacher">I'm a Teacher</Link>
+          </Button>
+        </>
+      );
+    }
+
+    // Student: Only show "Find a Teacher" button
+    if (role === "STUDENT") {
+      return (
+        <Button size="lg" asChild className="text-lg px-8">
+          <Link href="/search">Find a Teacher</Link>
+        </Button>
+      );
+    }
+
+    // Parent: Show "Find a Teacher" and "Update Profiles"
+    if (role === "PARENT") {
+      return (
+        <>
+          <Button size="lg" asChild className="text-lg px-8">
+            <Link href="/search">Find a Teacher</Link>
+          </Button>
+          <Button size="lg" variant="outline" asChild className="text-lg px-8">
+            <Link href="/my-profile">Update Profiles</Link>
+          </Button>
+        </>
+      );
+    }
+
+    // Teacher: Show "Update my Profile" and "Set my Availability"
+    if (role === "TEACHER") {
+      return (
+        <>
+          <Button size="lg" asChild className="text-lg px-8">
+            <Link href="/my-profile">Update my Profile</Link>
+          </Button>
+          <Button size="lg" variant="outline" asChild className="text-lg px-8">
+            <Link href="/my-timeslots">Set my Availability</Link>
+          </Button>
+        </>
+      );
+    }
+
+    // Default fallback for unknown roles
+    return (
+      <>
+        <Button size="lg" asChild className="text-lg px-8">
+          <Link href="/search">Find a Teacher</Link>
+        </Button>
+        <Button size="lg" variant="outline" asChild className="text-lg px-8">
+          <Link href="/signup?role=teacher">I'm a Teacher</Link>
+        </Button>
+      </>
+    );
+  };
+
   return (
     <section className="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden">
       {/* Background gradient */}
@@ -15,54 +86,49 @@ export default function Hero() {
           <div className="space-y-8">
             <div className="space-y-4">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-tight">
-                Connect with Your Perfect{" "}
-                <span className="text-primary">Music Teacher</span>
+                Your Gateway to{" "}
+                <span className="text-primary">Independent Music Teachers</span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-xl">
-                TempoLink streamlines connections between independent music teachers
-                and students. Find qualified instructors, schedule lessons, and grow
-                your musical journey.
+                Seamlessly connect students and parents with talented independent music teachers.
+                No agencies, no middlemen—just direct connections to passionate instructors ready
+                to inspire your musical journey.
               </p>
             </div>
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" asChild className="text-lg px-8">
-                <Link href="/search">Find a Teacher</Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild className="text-lg px-8">
-                <Link href="/signup?role=teacher">I'm a Teacher</Link>
-              </Button>
+              {renderButtons()}
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-6 pt-8 border-t border-border">
-              <div className="flex flex-col items-center sm:items-start">
-                <div className="flex items-center gap-2 text-primary">
-                  <Users size={24} />
-                  <span className="text-2xl font-bold">500+</span>
+            {/* Value Proposition */}
+            <div className="pt-8 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-2 h-2 rounded-full bg-primary mt-2" />
+                <div>
+                  <p className="font-semibold text-foreground">Direct Connections</p>
+                  <p className="text-sm text-muted-foreground">
+                    Connect directly with independent teachers—no agencies, no complicated processes.
+                  </p>
                 </div>
-                <span className="text-sm text-muted-foreground text-center sm:text-left">
-                  Teachers
-                </span>
               </div>
-              <div className="flex flex-col items-center sm:items-start">
-                <div className="flex items-center gap-2 text-primary">
-                  <Music size={24} />
-                  <span className="text-2xl font-bold">20+</span>
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-2 h-2 rounded-full bg-primary mt-2" />
+                <div>
+                  <p className="font-semibold text-foreground">Simple Scheduling</p>
+                  <p className="text-sm text-muted-foreground">
+                    Browse teacher profiles, check availability, and book lessons in minutes.
+                  </p>
                 </div>
-                <span className="text-sm text-muted-foreground text-center sm:text-left">
-                  Instruments
-                </span>
               </div>
-              <div className="flex flex-col items-center sm:items-start">
-                <div className="flex items-center gap-2 text-primary">
-                  <Calendar size={24} />
-                  <span className="text-2xl font-bold">10k+</span>
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-2 h-2 rounded-full bg-primary mt-2" />
+                <div>
+                  <p className="font-semibold text-foreground">For Students & Parents</p>
+                  <p className="text-sm text-muted-foreground">
+                    Whether you're learning yourself or finding a teacher for your child, we make it easy.
+                  </p>
                 </div>
-                <span className="text-sm text-muted-foreground text-center sm:text-left">
-                  Lessons
-                </span>
               </div>
             </div>
           </div>

@@ -3,68 +3,76 @@ import {
   Search,
   Calendar,
   MessageSquare,
-  Globe,
   Shield,
   Clock,
-  Star,
-  Video,
   BookOpen,
+  DollarSign,
+  GraduationCap,
 } from "lucide-react";
 
-const features = [
+const studentParentFeatures = [
   {
     icon: Search,
     title: "Advanced Search",
     description:
-      "Find teachers by instrument, language, experience level, and availability. Detailed filters make it easy to find your perfect match.",
+      "Easily find online lessons or local in-person teachers with advanced search options. Filter by instrument, location, teaching format, and more.",
   },
   {
     icon: Calendar,
-    title: "Seamless Scheduling",
+    title: "Book Lessons Directly",
     description:
-      "Integrated calendar system for booking and managing lessons. Set your availability and let students book directly.",
-  },
-  {
-    icon: MessageSquare,
-    title: "Direct Communication",
-    description:
-      "Message teachers directly through our platform. Discuss goals, ask questions, and coordinate lessons effortlessly.",
-  },
-  {
-    icon: Globe,
-    title: "Multi-Language Support",
-    description:
-      "Connect with teachers who speak your language. We support instructors teaching in multiple languages.",
-  },
-  {
-    icon: Video,
-    title: "In-Person & Online",
-    description:
-      "Choose between in-person lessons or online sessions via your preferred video platform. Flexible learning options.",
+      "Book lessons directly with teachers and easily reach out to them. No middlemen, just direct connections.",
   },
   {
     icon: BookOpen,
-    title: "Lesson Notes & Progress",
+    title: "Access Lesson Notes",
     description:
-      "Teachers can add lesson notes and track student progress. Students stay organized with practice reminders and goals.",
+      "Access lesson notes from teachers to track progress, review what you've learned, and stay organized.",
   },
   {
-    icon: Star,
-    title: "Verified Profiles",
+    icon: GraduationCap,
+    title: "Set Your Proficiency Level",
     description:
-      "All teacher profiles include credentials, experience, and student reviews. Make informed decisions confidently.",
+      "Set your own proficiency level for each instrument to help teachers understand where you're at in your musical journey.",
   },
+];
+
+const teacherFeatures = [
   {
     icon: Clock,
-    title: "Flexible Scheduling",
+    title: "Set Own Availability",
     description:
-      "Set your own availability, reschedule easily, and manage multiple students or teachers all in one place.",
+      "Set your own availability and teaching formats. Choose between in-person only, online only, or both—you decide.",
+  },
+  {
+    icon: Calendar,
+    title: "Schedule Weekly Lessons",
+    description:
+      "Easily schedule weekly lessons with students. Manage your timeslots and let students book directly through your availability.",
+  },
+  {
+    icon: MessageSquare,
+    title: "Connect Directly",
+    description:
+      "Connect directly with students and parents. No agencies or intermediaries—just you and your students.",
+  },
+  {
+    icon: DollarSign,
+    title: "Keep 100% of Your Earnings",
+    description:
+      "The platform never takes money from lessons. Set your own prices and keep everything you earn.",
+  },
+  {
+    icon: BookOpen,
+    title: "Create Lesson Notes",
+    description:
+      "Create lesson notes to share with students. Track progress, add reminders, and help students stay organized.",
   },
   {
     icon: Shield,
-    title: "Safe & Secure",
+    title: "Your Data is Safe",
     description:
-      "Your data is protected with industry-standard security. Safe messaging and secure payment processing.",
+      "Your data is protected with industry-standard security. Your information and student relationships are safe with us.",
   },
 ];
 
@@ -84,27 +92,60 @@ export default function Features() {
           </p>
         </div>
 
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => {
-            const Icon = feature.icon;
-            return (
-              <Card
-                key={index}
-                className="border-border hover:border-primary/50 transition-all hover:shadow-lg"
-              >
-                <CardHeader>
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                    <Icon className="w-6 h-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-xl">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>
-            );
-          })}
+        {/* Students & Parents Features */}
+        <div className="mb-16">
+          <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-8 text-center">
+            For Students & Parents
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {studentParentFeatures.map((feature, index) => {
+              const Icon = feature.icon;
+              return (
+                <Card
+                  key={index}
+                  className="border-border hover:border-primary/50 transition-all hover:shadow-lg"
+                >
+                  <CardHeader>
+                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                      <Icon className="w-6 h-6 text-primary" />
+                    </div>
+                    <CardTitle className="text-xl">{feature.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Teachers Features */}
+        <div>
+          <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-8 text-center">
+            For Teachers
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {teacherFeatures.map((feature, index) => {
+              const Icon = feature.icon;
+              return (
+                <Card
+                  key={index}
+                  className="border-border hover:border-primary/50 transition-all hover:shadow-lg"
+                >
+                  <CardHeader>
+                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                      <Icon className="w-6 h-6 text-primary" />
+                    </div>
+                    <CardTitle className="text-xl">{feature.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>
