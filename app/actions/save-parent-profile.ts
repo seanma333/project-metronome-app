@@ -10,6 +10,10 @@ interface SaveParentProfileParams {
   firstName: string;
   lastName: string;
   dateOfBirth?: string;
+  instrumentProficiencies?: Array<{
+    instrumentId: number;
+    proficiency: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
+  }>;
 }
 
 export async function saveParentProfile(params: SaveParentProfileParams) {
@@ -49,8 +53,11 @@ export async function saveParentProfile(params: SaveParentProfileParams) {
       dateOfBirth = new Date(Date.UTC(year, month - 1, day));
     }
 
+    let studentId: string;
+
     if (existingStudents.length > 0) {
       // Update existing student entry (first child)
+      studentId = existingStudents[0].id;
       await db
         .update(students)
         .set({
@@ -62,8 +69,9 @@ export async function saveParentProfile(params: SaveParentProfileParams) {
         .where(eq(students.parentId, parentId));
     } else {
       // Create new student entry for parent's first child
+      studentId = randomUUID();
       await db.insert(students).values({
-        id: randomUUID(),
+        id: studentId,
         parentId: parentId,
         firstName: params.firstName,
         lastName: params.lastName,
@@ -71,7 +79,7 @@ export async function saveParentProfile(params: SaveParentProfileParams) {
       });
     }
 
-    return { success: true };
+    return { success: true, studentId };
   } catch (error) {
     console.error("Error saving parent profile:", error);
     return { error: "Failed to save parent profile" };

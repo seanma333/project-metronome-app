@@ -10,6 +10,10 @@ interface SaveStudentProfileParams {
   firstName: string;
   lastName: string;
   dateOfBirth?: string;
+  instrumentProficiencies?: Array<{
+    instrumentId: number;
+    proficiency: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
+  }>;
 }
 
 export async function saveStudentProfile(params: SaveStudentProfileParams) {
@@ -49,8 +53,11 @@ export async function saveStudentProfile(params: SaveStudentProfileParams) {
       dateOfBirth = new Date(Date.UTC(year, month - 1, day));
     }
 
+    let studentId: string;
+
     if (existingStudent.length > 0) {
       // Update existing student
+      studentId = existingStudent[0].id;
       await db
         .update(students)
         .set({
@@ -62,8 +69,9 @@ export async function saveStudentProfile(params: SaveStudentProfileParams) {
         .where(eq(students.userId, userId));
     } else {
       // Create new student profile
+      studentId = randomUUID();
       await db.insert(students).values({
-        id: randomUUID(),
+        id: studentId,
         userId: userId,
         firstName: params.firstName,
         lastName: params.lastName,
@@ -71,7 +79,7 @@ export async function saveStudentProfile(params: SaveStudentProfileParams) {
       });
     }
 
-    return { success: true };
+    return { success: true, studentId };
   } catch (error) {
     console.error("Error saving student profile:", error);
     return { error: "Failed to save student profile" };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -12,6 +12,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/ca
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
 import { createBookingRequest } from "@/app/actions/create-booking-request";
 import { getTimezoneDisplayName } from "@/lib/timezone-utils";
+import { setStudentInstrumentProficiency } from "@/app/actions/manage-instrument-proficiency";
+
+type ProficiencyLevel = "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
 
 interface Teacher {
   id: string;
@@ -74,6 +77,11 @@ interface Child {
   imageUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
+  proficiencies?: Array<{
+    instrumentId: number;
+    instrumentName: string;
+    proficiency: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
+  }>;
 }
 
 interface RequestBookingContentProps {
@@ -268,7 +276,10 @@ export default function RequestBookingContent({
       ? teacher.instruments.sort((a, b) => a.name.localeCompare(b.name))[0].name
       : "")
   );
+  const [currentInstrumentId, setCurrentInstrumentId] = useState<number | null>(null);
+  const [proficiency, setProficiency] = useState<ProficiencyLevel>("BEGINNER");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
 
   // Filter timeslots based on selected format and exclude 12am-6am after timezone conversion
   const filteredTimeslots = useMemo(() => {
@@ -337,12 +348,81 @@ export default function RequestBookingContent({
     updateURL(format, currentInstrument);
   };
 
+  // Helper function to get proficiency from pre-loaded data
+  const getProficiencyForInstrument = (instrumentId: number): ProficiencyLevel => {
+    // For STUDENT accounts, children.length is 1, so use children[0].id
+    // For PARENT accounts, if there's only one child, use children[0].id, otherwise use selectedChild
+    const studentId = children.length > 1 ? selectedChild : (children.length > 0 ? children[0].id : null);
+    if (!studentId) {
+      return "BEGINNER";
+    }
+
+    const student = children.find((child) => child.id === studentId);
+    if (!student) {
+      return "BEGINNER";
+    }
+
+    if (!student.proficiencies || student.proficiencies.length === 0) {
+      return "BEGINNER";
+    }
+
+    const prof = student.proficiencies.find((p: { instrumentId: number }) => p.instrumentId === instrumentId);
+    if (!prof) {
+      return "BEGINNER";
+    }
+
+    // Ensure proficiency is a valid ProficiencyLevel
+    const proficiencyValue = prof.proficiency as ProficiencyLevel;
+    if (proficiencyValue && ["BEGINNER", "INTERMEDIATE", "ADVANCED"].includes(proficiencyValue)) {
+      return proficiencyValue;
+    }
+
+    return "BEGINNER";
+  };
+
   const handleInstrumentChange = (instrument: string) => {
     setCurrentInstrument(instrument);
     setSelectedTimeslot(null); // Clear selection when instrument changes
     // Update URL without reload
     updateURL(selectedFormat, instrument);
+
+    // Get instrument ID and set proficiency from pre-loaded data
+    const instrumentsList = teacher.instruments;
+    const instrumentRecord = instrumentsList.find((inst) => inst.name === instrument);
+    if (instrumentRecord) {
+      setCurrentInstrumentId(instrumentRecord.id);
+      // Get proficiency from pre-loaded student data
+      const prof = getProficiencyForInstrument(instrumentRecord.id);
+      setProficiency(prof || "BEGINNER");
+    } else {
+      setProficiency("BEGINNER");
+    }
   };
+
+  // Load proficiency when component mounts, instrument changes, or student changes
+  useEffect(() => {
+    if (!currentInstrument) {
+      setProficiency("BEGINNER");
+      return;
+    }
+
+    // Wait for children to be loaded (should be immediate, but just in case)
+    if (children.length === 0) {
+      setProficiency("BEGINNER");
+      return;
+    }
+
+    const instrumentsList = teacher.instruments;
+    const instrumentRecord = instrumentsList.find((inst) => inst.name === currentInstrument);
+    if (instrumentRecord) {
+      setCurrentInstrumentId(instrumentRecord.id);
+      // Get proficiency from pre-loaded student data
+      const prof = getProficiencyForInstrument(instrumentRecord.id);
+      setProficiency(prof || "BEGINNER");
+    } else {
+      setProficiency("BEGINNER");
+    }
+  }, [currentInstrument, selectedChild, children]);
 
   const handleTimeslotSelect = (timeslotId: string) => {
     setSelectedTimeslot(timeslotId === selectedTimeslot ? null : timeslotId);
@@ -355,13 +435,24 @@ export default function RequestBookingContent({
 
     try {
       // For parent users, pass the selected child's ID
-      const studentId = children.length > 1 ? selectedChild : undefined;
+      const studentId = children.length > 1 ? selectedChild : (children.length > 0 ? children[0].id : null);
       const lessonFormat = selectedFormat === "online" ? "ONLINE" : "IN_PERSON";
-      const result = await createBookingRequest(selectedTimeslot, studentId, currentInstrument, lessonFormat);
+      const result = await createBookingRequest(
+        selectedTimeslot,
+        studentId || undefined,
+        currentInstrument,
+        lessonFormat,
+        proficiency
+      );
 
       if (result.error) {
         alert(result.error);
       } else {
+        // Save/update proficiency if student ID and instrument ID are available
+        if (studentId && currentInstrumentId) {
+          await setStudentInstrumentProficiency(studentId, currentInstrumentId, proficiency);
+        }
+
         alert("Booking request submitted successfully!");
         router.push("/my-profile"); // Redirect to profile or bookings page
       }
@@ -395,6 +486,17 @@ export default function RequestBookingContent({
                 <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
                 <p className="text-muted-foreground">{teacher.user.email}</p>
               </div>
+
+              {/* Instruments */}
+              {teacher.instruments.length > 0 && (
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {teacher.instruments.map((instrument) => (
+                    <Badge key={instrument.id} variant="secondary">
+                      {instrument.name}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -436,27 +538,51 @@ export default function RequestBookingContent({
           </Card>
         )}
 
-        {/* Instrument Selection */}
+        {/* Instrument and Proficiency Selection */}
         {teacher.instruments.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Instrument</CardTitle>
+              <CardTitle>Lesson Details</CardTitle>
             </CardHeader>
             <CardContent>
-              <Select value={currentInstrument} onValueChange={handleInstrumentChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select instrument" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teacher.instruments
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map((instrument) => (
-                      <SelectItem key={instrument.id} value={instrument.name}>
-                        {instrument.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Instrument</Label>
+                  <Select value={currentInstrument} onValueChange={handleInstrumentChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select instrument" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teacher.instruments
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((instrument) => (
+                          <SelectItem key={instrument.id} value={instrument.name}>
+                            {instrument.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {currentInstrument && (userRole === "STUDENT" || (userRole === "PARENT" && children.length > 0)) && (
+                  <div className="space-y-2">
+                    <Label>Student Proficiency</Label>
+                    <Select
+                      value={proficiency || "BEGINNER"}
+                      onValueChange={(value) => setProficiency(value as ProficiencyLevel)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Beginner" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BEGINNER">Beginner</SelectItem>
+                        <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
+                        <SelectItem value="ADVANCED">Advanced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
@@ -488,35 +614,6 @@ export default function RequestBookingContent({
           </CardContent>
         </Card>
 
-        {/* Teacher Info */}
-        {teacher.bio && (
-          <Card>
-            <CardHeader>
-              <CardTitle>About</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">{teacher.bio}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Instruments */}
-        {teacher.instruments.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Instruments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {teacher.instruments.map((instrument) => (
-                  <Badge key={instrument.id} variant="secondary">
-                    {instrument.name}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {/* Right Side - Available Timeslots */}

@@ -53,24 +53,53 @@ const getStatusText = (status: string) => {
   }
 };
 
+const getProficiencyDisplay = (prof: string | null) => {
+  if (!prof) return "Not specified";
+  switch (prof) {
+    case "BEGINNER":
+      return "Beginner";
+    case "INTERMEDIATE":
+      return "Intermediate";
+    case "ADVANCED":
+      return "Advanced";
+    default:
+      return prof;
+  }
+};
+
 export default function TeacherBookingRequests({
   bookingRequests,
   onStatusUpdate
 }: TeacherBookingRequestsProps) {
   const [processingRequests, setProcessingRequests] = useState<Set<string>>(new Set());
 
-  // Group booking requests by timeslot
-  const requestsByTimeslot = bookingRequests.reduce((acc, request) => {
-    const timeslotKey = `${request.timeslot.dayOfWeek}-${request.timeslot.startTime}-${request.timeslot.endTime}`;
-    if (!acc[timeslotKey]) {
-      acc[timeslotKey] = {
-        timeslot: request.timeslot,
-        requests: []
-      };
+  // Helper function to sort timeslots (day of week first, then start time)
+  const sortByTimeslot = (a: any, b: any) => {
+    // First compare by day of week (0 = Sunday)
+    if (a.timeslot.dayOfWeek !== b.timeslot.dayOfWeek) {
+      return a.timeslot.dayOfWeek - b.timeslot.dayOfWeek;
     }
-    acc[timeslotKey].requests.push(request);
+    // Then compare by start time
+    return a.timeslot.startTime.localeCompare(b.timeslot.startTime);
+  };
+
+  // Group booking requests by status
+  const requestsByStatus = bookingRequests.reduce((acc, request) => {
+    const status = request.bookingStatus;
+    if (!acc[status]) {
+      acc[status] = [];
+    }
+    acc[status].push(request);
     return acc;
-  }, {} as Record<string, { timeslot: any; requests: any[] }>);
+  }, {} as Record<string, any[]>);
+
+  // Sort each status group by timeslot
+  Object.keys(requestsByStatus).forEach(status => {
+    requestsByStatus[status].sort(sortByTimeslot);
+  });
+
+  // Define status order
+  const statusOrder = ["PENDING", "ACCEPTED", "DENIED", "CANCELLED"];
 
   const handleAcceptRequest = async (requestId: string) => {
     if (processingRequests.has(requestId)) return;
@@ -162,17 +191,15 @@ export default function TeacherBookingRequests({
         </div>
       </div>
 
-      {Object.entries(requestsByTimeslot).map(([timeslotKey, timeslotData]) => {
-        const { timeslot, requests } = timeslotData as { timeslot: any; requests: any[] };
-        const dayName = DAYS_OF_WEEK[timeslot.dayOfWeek];
-        const startTime = formatTime(timeslot.startTime);
-        const endTime = formatTime(timeslot.endTime);
+      {statusOrder.map((status) => {
+        const requests = requestsByStatus[status] || [];
+        if (requests.length === 0) return null;
 
         return (
-          <div key={timeslotKey} className="space-y-4">
+          <div key={status} className="space-y-4">
             <div className="border-l-4 border-primary pl-4">
               <h2 className="text-xl font-semibold">
-                {dayName}s, {startTime} - {endTime}
+                {getStatusText(status)}
               </h2>
               <p className="text-sm text-muted-foreground">
                 {requests.length} booking request{requests.length !== 1 ? 's' : ''}
@@ -180,10 +207,9 @@ export default function TeacherBookingRequests({
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {requests.map((request) => {
+              {requests.map((request: any) => {
                 // Determine the requesting user and their image
                 const requestingUser = request.requestingUser;
-                const userImage = requestingUser?.imageUrl;
                 const studentName = `${request.student.firstName || ''} ${request.student.lastName || ''}`.trim();
                 const parentName = requestingUser && request.student.parentId
                   ? `${requestingUser.firstName || ''} ${requestingUser.lastName || ''}`.trim()
@@ -191,6 +217,17 @@ export default function TeacherBookingRequests({
                 const instrumentName = request.instrument.name;
                 const lessonFormat = request.lessonFormat === "ONLINE" ? "online" : "in-person";
                 const userEmail = requestingUser?.email;
+
+                // Image priority: students.imageUrl > users.imageUrl > default
+                const profileImage = request.student.imageUrl
+                  || requestingUser?.imageUrl
+                  || "/images/profile/default_user.png";
+
+                // Timeslot information
+                const dayName = DAYS_OF_WEEK[request.timeslot.dayOfWeek];
+                const startTime = formatTime(request.timeslot.startTime);
+                const endTime = formatTime(request.timeslot.endTime);
+                const timeslotDisplay = `${dayName}s, ${startTime} - ${endTime}`;
 
                 // Create title based on whether there's a parent
                 const title = parentName
@@ -201,17 +238,15 @@ export default function TeacherBookingRequests({
                   <Card key={request.id} className="relative">
                     <CardHeader className="pb-3">
                       <div className="flex items-start gap-3">
-                        {userImage && (
-                          <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
-                            <Image
-                              src={userImage}
-                              alt={parentName || studentName}
-                              width={48}
-                              height={48}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
+                        <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
+                          <Image
+                            src={profileImage}
+                            alt={parentName || studentName}
+                            width={48}
+                            height={48}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                         <div className="flex-1 min-w-0">
                           <CardTitle className="text-base leading-tight">
                             {title}
@@ -224,6 +259,18 @@ export default function TeacherBookingRequests({
                       <Badge variant={getStatusColor(request.bookingStatus)}>
                         {getStatusText(request.bookingStatus)}
                       </Badge>
+
+                      {/* Timeslot Display */}
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Time: </span>
+                        <span className="font-medium">{timeslotDisplay}</span>
+                      </div>
+
+                      {/* Proficiency Display */}
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Proficiency: </span>
+                        <span className="font-medium">{getProficiencyDisplay(request.proficiency)}</span>
+                      </div>
 
                       {request.bookingStatus === "PENDING" && (
                         <div className="flex flex-col gap-2">

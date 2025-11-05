@@ -2,7 +2,7 @@
 
 import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { users, students } from "@/lib/db/schema";
+import { users, students, studentInstrumentProficiency, instruments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export async function getParentChildren() {
@@ -10,7 +10,7 @@ export async function getParentChildren() {
     const clerkUser = await currentUser();
 
     if (!clerkUser) {
-      return null;
+      return [];
     }
 
     // Get the user from our database
@@ -21,11 +21,13 @@ export async function getParentChildren() {
       .limit(1);
 
     if (user.length === 0) {
-      return null;
+      return [];
     }
 
     const userId = user[0].id;
     const userRole = user[0].role;
+
+    let studentList: any[] = [];
 
     if (userRole === "STUDENT") {
       // For students, get their own student profile
@@ -35,7 +37,7 @@ export async function getParentChildren() {
         .where(eq(students.userId, userId))
         .limit(1);
 
-      return student.length > 0 ? [student[0]] : [];
+      studentList = student.length > 0 ? [student[0]] : [];
     } else if (userRole === "PARENT") {
       // For parents, get all their children
       const children = await db
@@ -43,10 +45,36 @@ export async function getParentChildren() {
         .from(students)
         .where(eq(students.parentId, userId));
 
-      return children;
+      studentList = children;
     }
 
-    return [];
+    // Load proficiencies for all students
+    const studentsWithProficiencies = await Promise.all(
+      studentList.map(async (student) => {
+        const proficiencies = await db
+          .select({
+            proficiency: studentInstrumentProficiency,
+            instrument: instruments,
+          })
+          .from(studentInstrumentProficiency)
+          .innerJoin(
+            instruments,
+            eq(studentInstrumentProficiency.instrumentId, instruments.id)
+          )
+          .where(eq(studentInstrumentProficiency.studentId, student.id));
+
+        return {
+          ...student,
+          proficiencies: proficiencies.map((prof) => ({
+            instrumentId: prof.instrument.id,
+            instrumentName: prof.instrument.name,
+            proficiency: prof.proficiency.proficiency, // Access the nested proficiency enum value
+          })),
+        };
+      })
+    );
+
+    return studentsWithProficiencies;
   } catch (error) {
     console.error("Error fetching parent children:", error);
     return [];

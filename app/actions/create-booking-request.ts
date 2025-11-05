@@ -10,7 +10,8 @@ export async function createBookingRequest(
   timeslotId: string,
   studentId: string | undefined,
   instrument: string | undefined,
-  lessonFormat: "IN_PERSON" | "ONLINE"
+  lessonFormat: "IN_PERSON" | "ONLINE",
+  proficiency?: "BEGINNER" | "INTERMEDIATE" | "ADVANCED"
 ) {
   try {
     const clerkUser = await currentUser();

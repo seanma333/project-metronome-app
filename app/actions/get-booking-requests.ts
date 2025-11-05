@@ -9,7 +9,8 @@ import {
   teacherTimeslots,
   teachers,
   instruments,
-  lessons
+  lessons,
+  studentInstrumentProficiency,
 } from "@/lib/db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -208,7 +209,7 @@ export async function getTeacherBookingRequests() {
       .innerJoin(instruments, eq(bookingRequests.instrumentId, instruments.id))
       .where(eq(teacherTimeslots.teacherId, userData.id));
 
-    // Get user data for each booking request
+    // Get user data and proficiency for each booking request
     const processedBookingRequests = await Promise.all(
       bookingRequestsData.map(async (request) => {
         let requestingUser = null;
@@ -237,9 +238,24 @@ export async function getTeacherBookingRequests() {
           }
         }
 
+        // Get proficiency for this student and instrument
+        const proficiencyData = await db
+          .select()
+          .from(studentInstrumentProficiency)
+          .where(
+            and(
+              eq(studentInstrumentProficiency.studentId, request.student.id),
+              eq(studentInstrumentProficiency.instrumentId, request.instrument.id)
+            )
+          )
+          .limit(1);
+
+        const proficiency = proficiencyData.length > 0 ? proficiencyData[0].proficiency : null;
+
         return {
           ...request,
           requestingUser,
+          proficiency,
         };
       })
     );

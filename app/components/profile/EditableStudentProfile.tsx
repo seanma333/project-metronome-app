@@ -7,8 +7,18 @@ import Image from "next/image";
 import ProfileSection from "./ProfileSection";
 import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
 import { updateStudentName, updateStudentDateOfBirth } from "@/app/actions/update-student-profile";
 import { updateStudentImageUrl } from "@/app/actions/update-student-image";
+import { getInstruments } from "@/app/actions/get-instruments-languages";
+import {
+  getStudentInstrumentProficiencies,
+  setStudentInstrumentProficiency,
+  removeStudentInstrumentProficiency,
+} from "@/app/actions/manage-instrument-proficiency";
+import ProficiencyBadge from "./ProficiencyBadge";
+
+type ProficiencyLevel = "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
 
 interface EditableStudentProfileProps {
   student: {
@@ -63,11 +73,42 @@ export default function EditableStudentProfile({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Instrument proficiency state
+  const [instruments, setInstruments] = useState<any[]>([]);
+  const [proficiencies, setProficiencies] = useState<any[]>([]);
+  const [isLoadingProficiencies, setIsLoadingProficiencies] = useState(true);
+  const [isEditingProficiencies, setIsEditingProficiencies] = useState(false);
+  const [addingProficiency, setAddingProficiency] = useState(false);
+  const [newProficiency, setNewProficiency] = useState<{ instrumentId: number | null; proficiency: ProficiencyLevel }>({
+    instrumentId: null,
+    proficiency: "BEGINNER",
+  });
+
   useEffect(() => {
     setFirstName(initialStudent.firstName || "");
     setLastName(initialStudent.lastName || "");
     setDateOfBirth(formatDateForInput(initialStudent.dateOfBirth));
   }, [initialStudent]);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [instrumentsList, proficienciesResult] = await Promise.all([
+          getInstruments(),
+          getStudentInstrumentProficiencies(initialStudent.id),
+        ]);
+        setInstruments(instrumentsList);
+        if (!proficienciesResult.error && proficienciesResult.proficiencies) {
+          setProficiencies(proficienciesResult.proficiencies);
+        }
+      } catch (err) {
+        console.error("Error loading proficiencies:", err);
+      } finally {
+        setIsLoadingProficiencies(false);
+      }
+    }
+    loadData();
+  }, [initialStudent.id]);
 
   const handleSaveName = async () => {
     setIsSavingName(true);
@@ -130,6 +171,99 @@ export default function EditableStudentProfile({
   const handleCancelDateOfBirth = () => {
     setDateOfBirth(formatDateForInput(initialStudent.dateOfBirth));
     setIsEditingDateOfBirth(false);
+  };
+
+  const handleAddProficiency = async () => {
+    if (!newProficiency.instrumentId) {
+      alert("Please select an instrument");
+      return;
+    }
+
+    try {
+      const result = await setStudentInstrumentProficiency(
+        initialStudent.id,
+        newProficiency.instrumentId,
+        newProficiency.proficiency
+      );
+
+      if (result.error) {
+        alert(result.error);
+      } else {
+              // Reload proficiencies
+              const proficienciesResult = await getStudentInstrumentProficiencies(initialStudent.id);
+              if (!proficienciesResult.error && proficienciesResult.proficiencies) {
+                setProficiencies(proficienciesResult.proficiencies);
+              }
+              setAddingProficiency(false);
+              setNewProficiency({ instrumentId: null, proficiency: "BEGINNER" });
+              setIsEditingProficiencies(false);
+      }
+    } catch (err) {
+      console.error("Error adding proficiency:", err);
+      alert("Failed to add proficiency");
+    }
+  };
+
+  const handleUpdateProficiency = async (instrumentId: number, proficiency: ProficiencyLevel) => {
+    try {
+      const result = await setStudentInstrumentProficiency(
+        initialStudent.id,
+        instrumentId,
+        proficiency
+      );
+
+      if (result.error) {
+        alert(result.error);
+      } else {
+        // Reload proficiencies
+        const proficienciesResult = await getStudentInstrumentProficiencies(initialStudent.id);
+        if (!proficienciesResult.error && proficienciesResult.proficiencies) {
+          setProficiencies(proficienciesResult.proficiencies);
+        }
+      }
+    } catch (err) {
+      console.error("Error updating proficiency:", err);
+      alert("Failed to update proficiency");
+    }
+  };
+
+  const handleRemoveProficiency = async (instrumentId: number) => {
+    if (!confirm("Are you sure you want to remove this instrument proficiency?")) {
+      return;
+    }
+
+    try {
+      const result = await removeStudentInstrumentProficiency(
+        initialStudent.id,
+        instrumentId
+      );
+
+      if (result.error) {
+        alert(result.error);
+      } else {
+        // Reload proficiencies
+        const proficienciesResult = await getStudentInstrumentProficiencies(initialStudent.id);
+        if (!proficienciesResult.error && proficienciesResult.proficiencies) {
+          setProficiencies(proficienciesResult.proficiencies);
+        }
+      }
+    } catch (err) {
+      console.error("Error removing proficiency:", err);
+      alert("Failed to remove proficiency");
+    }
+  };
+
+  const getProficiencyDisplay = (prof: string) => {
+    switch (prof) {
+      case "BEGINNER":
+        return "Beginner";
+      case "INTERMEDIATE":
+        return "Intermediate";
+      case "ADVANCED":
+        return "Advanced";
+      default:
+        return prof;
+    }
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -370,6 +504,147 @@ export default function EditableStudentProfile({
             <p className="text-muted-foreground">
               {formatDateForDisplay(initialStudent.dateOfBirth)}
             </p>
+          )}
+        </ProfileSection>
+
+        {/* Instrument Proficiencies */}
+        <ProfileSection
+          title="Instrument Proficiencies"
+          onEdit={() => setIsEditingProficiencies(!isEditingProficiencies)}
+          isEditing={isEditingProficiencies}
+          showEditButton={true}
+        >
+          {isLoadingProficiencies ? (
+            <p className="text-muted-foreground">Loading...</p>
+          ) : isEditingProficiencies ? (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {proficiencies.length > 0 ? (
+                  proficiencies.map((prof) => (
+                    <div key={prof.proficiency.id} className="flex items-center gap-2">
+                      <ProficiencyBadge
+                        instrument={prof.instrument}
+                        proficiency={prof.proficiency.proficiency}
+                      />
+                      <Select
+                        value={prof.proficiency.proficiency}
+                        onValueChange={(value) =>
+                          handleUpdateProficiency(prof.instrument.id, value as ProficiencyLevel)
+                        }
+                      >
+                        <SelectTrigger className="h-8 w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="BEGINNER">Beginner</SelectItem>
+                          <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
+                          <SelectItem value="ADVANCED">Advanced</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveProficiency(prof.instrument.id)}
+                        className="h-8 px-2"
+                      >
+                        <Image
+                          src="/svg/delete_button.svg"
+                          alt="Remove"
+                          width={16}
+                          height={16}
+                          className="object-contain"
+                        />
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground">No instrument proficiencies added yet.</p>
+                )}
+              </div>
+              {!addingProficiency ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAddingProficiency(true)}
+                >
+                  Add Instrument
+                </Button>
+              ) : (
+                <div className="space-y-3 border-t pt-3">
+                  <div className="flex gap-2">
+                    <Select
+                      value={newProficiency.instrumentId?.toString() || ""}
+                      onValueChange={(value) =>
+                        setNewProficiency({ ...newProficiency, instrumentId: parseInt(value) })
+                      }
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Select instrument" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {instruments
+                          .filter(
+                            (inst) =>
+                              !proficiencies.some(
+                                (prof) => prof.instrument.id === inst.id
+                              )
+                          )
+                          .map((instrument) => (
+                            <SelectItem
+                              key={instrument.id}
+                              value={instrument.id.toString()}
+                            >
+                              {instrument.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={newProficiency.proficiency}
+                      onValueChange={(value) =>
+                        setNewProficiency({ ...newProficiency, proficiency: value as ProficiencyLevel })
+                      }
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BEGINNER">Beginner</SelectItem>
+                        <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
+                        <SelectItem value="ADVANCED">Advanced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setAddingProficiency(false);
+                        setNewProficiency({ instrumentId: null, proficiency: "BEGINNER" });
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button size="sm" onClick={handleAddProficiency}>
+                      Add
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : proficiencies.length === 0 ? (
+            <p className="text-muted-foreground">No instrument proficiencies added yet.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {proficiencies.map((prof) => (
+                <ProficiencyBadge
+                  key={prof.proficiency.id}
+                  instrument={prof.instrument}
+                  proficiency={prof.proficiency.proficiency}
+                />
+              ))}
+            </div>
           )}
         </ProfileSection>
       </div>

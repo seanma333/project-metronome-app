@@ -7,6 +7,7 @@ import Image from "next/image";
 import ProfileSection from "./ProfileSection";
 import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
 import { updateTeacherName } from "@/app/actions/update-teacher-name";
 import {
   addParentStudent,
@@ -14,6 +15,15 @@ import {
   removeParentStudent,
 } from "@/app/actions/manage-parent-students";
 import { updateParentImageUrl } from "@/app/actions/update-parent-image";
+import { getInstruments } from "@/app/actions/get-instruments-languages";
+import {
+  getStudentInstrumentProficiencies,
+  setStudentInstrumentProficiency,
+  removeStudentInstrumentProficiency,
+} from "@/app/actions/manage-instrument-proficiency";
+import ProficiencyBadge from "./ProficiencyBadge";
+
+type ProficiencyLevel = "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
 
 interface EditableParentProfileProps {
   user: {
@@ -48,11 +58,40 @@ export default function EditableParentProfile({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Instrument proficiency state
+  const [instruments, setInstruments] = useState<any[]>([]);
+  const [studentProficiencies, setStudentProficiencies] = useState<Record<string, any[]>>({});
+  const [editingProficienciesFor, setEditingProficienciesFor] = useState<string | null>(null);
+  const [addingProficiencyFor, setAddingProficiencyFor] = useState<string | null>(null);
+  const [newProficiencies, setNewProficiencies] = useState<Record<string, { instrumentId: number | null; proficiency: ProficiencyLevel }>>({});
+
   useEffect(() => {
     setFirstName(initialUser.firstName || "");
     setLastName(initialUser.lastName || "");
     setStudents(initialStudents);
   }, [initialUser, initialStudents]);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const instrumentsList = await getInstruments();
+        setInstruments(instrumentsList);
+
+        // Load proficiencies for all students
+        const proficienciesMap: Record<string, any[]> = {};
+        for (const student of initialStudents) {
+          const result = await getStudentInstrumentProficiencies(student.id);
+          if (!result.error && result.proficiencies) {
+            proficienciesMap[student.id] = result.proficiencies;
+          }
+        }
+        setStudentProficiencies(proficienciesMap);
+      } catch (err) {
+        console.error("Error loading proficiencies:", err);
+      }
+    }
+    loadData();
+  }, [initialStudents]);
 
   const handleSaveName = async () => {
     setIsSavingName(true);
@@ -242,6 +281,91 @@ export default function EditableParentProfile({
     }
   };
 
+  const handleAddProficiency = async (studentId: string) => {
+    const newProf = newProficiencies[studentId];
+    if (!newProf || !newProf.instrumentId) {
+      alert("Please select an instrument");
+      return;
+    }
+
+    try {
+      const result = await setStudentInstrumentProficiency(
+        studentId,
+        newProf.instrumentId,
+        newProf.proficiency
+      );
+
+      if (result.error) {
+        alert(result.error);
+      } else {
+        // Reload proficiencies
+        const proficienciesResult = await getStudentInstrumentProficiencies(studentId);
+        if (!proficienciesResult.error && proficienciesResult.proficiencies) {
+          setStudentProficiencies({
+            ...studentProficiencies,
+            [studentId]: proficienciesResult.proficiencies,
+          });
+        }
+        setAddingProficiencyFor(null);
+        setNewProficiencies({
+          ...newProficiencies,
+          [studentId]: { instrumentId: null, proficiency: "BEGINNER" },
+        });
+      }
+    } catch (err) {
+      console.error("Error adding proficiency:", err);
+      alert("Failed to add proficiency");
+    }
+  };
+
+  const handleUpdateProficiency = async (studentId: string, instrumentId: number, proficiency: ProficiencyLevel) => {
+    try {
+      const result = await setStudentInstrumentProficiency(studentId, instrumentId, proficiency);
+
+      if (result.error) {
+        alert(result.error);
+      } else {
+        // Reload proficiencies
+        const proficienciesResult = await getStudentInstrumentProficiencies(studentId);
+        if (!proficienciesResult.error && proficienciesResult.proficiencies) {
+          setStudentProficiencies({
+            ...studentProficiencies,
+            [studentId]: proficienciesResult.proficiencies,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error updating proficiency:", err);
+      alert("Failed to update proficiency");
+    }
+  };
+
+  const handleRemoveProficiency = async (studentId: string, instrumentId: number) => {
+    if (!confirm("Are you sure you want to remove this instrument proficiency?")) {
+      return;
+    }
+
+    try {
+      const result = await removeStudentInstrumentProficiency(studentId, instrumentId);
+
+      if (result.error) {
+        alert(result.error);
+      } else {
+        // Reload proficiencies
+        const proficienciesResult = await getStudentInstrumentProficiencies(studentId);
+        if (!proficienciesResult.error && proficienciesResult.proficiencies) {
+          setStudentProficiencies({
+            ...studentProficiencies,
+            [studentId]: proficienciesResult.proficiencies,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error removing proficiency:", err);
+      alert("Failed to remove proficiency");
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Parent Name Section */}
@@ -400,52 +524,222 @@ export default function EditableParentProfile({
                 showRemove={true}
               />
             ) : (
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">
-                    {[student.firstName, student.lastName]
-                      .filter(Boolean)
-                      .join(" ") || "Student"}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {student.dateOfBirth
-                      ? `Date of Birth: ${(() => {
-                          const d = new Date(student.dateOfBirth);
-                          const year = d.getUTCFullYear();
-                          const month = d.toLocaleDateString("en-US", { month: "long", timeZone: "UTC" });
-                          const day = d.getUTCDate();
-                          return `${month} ${day}, ${year}`;
-                        })()}`
-                      : "Date of Birth: Not set"}
-                  </p>
+              <div className="space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">
+                      {[student.firstName, student.lastName]
+                        .filter(Boolean)
+                        .join(" ") || "Student"}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {student.dateOfBirth
+                        ? `Date of Birth: ${(() => {
+                            const d = new Date(student.dateOfBirth);
+                            const year = d.getUTCFullYear();
+                            const month = d.toLocaleDateString("en-US", { month: "long", timeZone: "UTC" });
+                            const day = d.getUTCDate();
+                            return `${month} ${day}, ${year}`;
+                          })()}`
+                        : "Date of Birth: Not set"}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setEditingStudentId(student.id)}
+                      className="p-2 hover:bg-accent rounded transition-colors"
+                      aria-label="Edit student"
+                    >
+                      <Image
+                        src="/svg/edit_button.svg"
+                        alt="Edit"
+                        width={20}
+                        height={20}
+                        className="object-contain"
+                      />
+                    </button>
+                    <button
+                      onClick={() => handleRemoveStudent(student.id)}
+                      className="p-2 hover:bg-destructive/10 rounded transition-colors"
+                      aria-label="Remove student"
+                    >
+                      <Image
+                        src="/svg/delete_button.svg"
+                        alt="Delete"
+                        width={20}
+                        height={20}
+                        className="object-contain"
+                      />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setEditingStudentId(student.id)}
-                    className="p-2 hover:bg-accent rounded transition-colors"
-                    aria-label="Edit student"
-                  >
-                    <Image
-                      src="/svg/edit_button.svg"
-                      alt="Edit"
-                      width={20}
-                      height={20}
-                      className="object-contain"
-                    />
-                  </button>
-                  <button
-                    onClick={() => handleRemoveStudent(student.id)}
-                    className="p-2 hover:bg-destructive/10 rounded transition-colors"
-                    aria-label="Remove student"
-                  >
-                    <Image
-                      src="/svg/delete_button.svg"
-                      alt="Delete"
-                      width={20}
-                      height={20}
-                      className="object-contain"
-                    />
-                  </button>
+
+                {/* Instrument Proficiencies */}
+                <div className="border-t pt-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-foreground">Instrument Proficiencies</h4>
+                    {editingProficienciesFor === student.id ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingProficienciesFor(null);
+                          setAddingProficiencyFor(null);
+                        }}
+                      >
+                        Done
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingProficienciesFor(student.id)}
+                      >
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+
+                  {editingProficienciesFor === student.id ? (
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        {studentProficiencies[student.id]?.length > 0 ? (
+                          studentProficiencies[student.id]?.map((prof) => (
+                            <div key={prof.proficiency.id} className="flex items-center gap-2">
+                              <ProficiencyBadge
+                                instrument={prof.instrument}
+                                proficiency={prof.proficiency.proficiency}
+                              />
+                              <Select
+                                value={prof.proficiency.proficiency}
+                                onValueChange={(value) =>
+                                  handleUpdateProficiency(student.id, prof.instrument.id, value as ProficiencyLevel)
+                                }
+                              >
+                                <SelectTrigger className="h-8 w-32">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="BEGINNER">Beginner</SelectItem>
+                                  <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
+                                  <SelectItem value="ADVANCED">Advanced</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveProficiency(student.id, prof.instrument.id)}
+                                className="h-8 px-2"
+                              >
+                                <Image
+                                  src="/svg/delete_button.svg"
+                                  alt="Remove"
+                                  width={16}
+                                  height={16}
+                                  className="object-contain"
+                                />
+                              </Button>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No instrument proficiencies added yet.</p>
+                        )}
+                      </div>
+                      {!addingProficiencyFor ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setAddingProficiencyFor(student.id);
+                            if (!newProficiencies[student.id]) {
+                              setNewProficiencies({
+                                ...newProficiencies,
+                                [student.id]: { instrumentId: null, proficiency: "BEGINNER" },
+                              });
+                            }
+                          }}
+                        >
+                          Add Instrument
+                        </Button>
+                      ) : (
+                        <div className="space-y-3 border-t pt-3">
+                          <div className="flex gap-2 items-end">
+                            <Select
+                              value={newProficiencies[student.id]?.instrumentId?.toString() || ""}
+                              onValueChange={(value) =>
+                                setNewProficiencies({
+                                  ...newProficiencies,
+                                  [student.id]: { ...newProficiencies[student.id], instrumentId: parseInt(value) },
+                                })
+                              }
+                            >
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="Select instrument" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {instruments
+                                  .filter(
+                                    (inst) =>
+                                      !studentProficiencies[student.id]?.some(
+                                        (prof) => prof.instrument.id === inst.id
+                                      )
+                                  )
+                                  .map((instrument) => (
+                                    <SelectItem key={instrument.id} value={instrument.id.toString()}>
+                                      {instrument.name}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            <Select
+                              value={newProficiencies[student.id]?.proficiency || "BEGINNER"}
+                              onValueChange={(value) =>
+                                setNewProficiencies({
+                                  ...newProficiencies,
+                                  [student.id]: { ...newProficiencies[student.id], proficiency: value as ProficiencyLevel },
+                                })
+                              }
+                            >
+                              <SelectTrigger className="flex-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="BEGINNER">Beginner</SelectItem>
+                                <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
+                                <SelectItem value="ADVANCED">Advanced</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setAddingProficiencyFor(null);
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button size="sm" onClick={() => handleAddProficiency(student.id)}>
+                                Add
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : studentProficiencies[student.id]?.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No instrument proficiencies added yet.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {studentProficiencies[student.id]?.map((prof) => (
+                        <ProficiencyBadge
+                          key={prof.proficiency.id}
+                          instrument={prof.instrument}
+                          proficiency={prof.proficiency.proficiency}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
