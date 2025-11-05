@@ -32,8 +32,10 @@ export default function RoleSelectionOnboarding() {
         setError(result.error);
         setIsSaving(false);
       } else {
-        // Refresh the page to get updated user data with role
-        router.refresh();
+        // Wait a moment for Clerk session to update, then force a full reload
+        // This ensures the middleware sees the updated role in session claims
+        await new Promise(resolve => setTimeout(resolve, 500));
+        window.location.href = "/onboarding";
       }
     } catch (err) {
       setError("Failed to save role. Please try again.");

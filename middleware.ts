@@ -16,8 +16,11 @@ export default clerkMiddleware(async (auth, req) => {
 
   // If user is logged in and not on a public route, check for role
   if (userId && !isPublicRoute(req)) {
+    // Check both metadata and publicMetadata for role
+    // publicMetadata is the source of truth, but metadata might have it too
+    const publicMetadata = sessionClaims?.publicMetadata as { role?: string } | undefined;
     const metadata = sessionClaims?.metadata as { role?: string } | undefined;
-    const role = metadata?.role;
+    const role = publicMetadata?.role || metadata?.role;
     const validRoles = ["TEACHER", "STUDENT", "PARENT"];
 
     // If no role or invalid role, redirect to onboarding

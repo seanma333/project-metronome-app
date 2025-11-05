@@ -2,17 +2,34 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import OnboardingForm from "./OnboardingForm";
 import RoleSelectionOnboarding from "./RoleSelectionOnboarding";
+import { updateUserRole } from "@/app/actions/update-user-metadata";
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ role?: string }>;
+}) {
   const user = await currentUser();
 
   if (!user) {
     redirect("/sign-in");
   }
 
+  const params = await searchParams;
+  const roleParam = params.role;
+
   // Check if user has a role in metadata
-  const role = user.publicMetadata?.role as string | undefined;
+  let role = user.publicMetadata?.role as string | undefined;
   const validRoles = ["TEACHER", "STUDENT", "PARENT"];
+
+  // If role is in query params but not in metadata, set it automatically and redirect
+  if (roleParam && validRoles.includes(roleParam.toUpperCase()) && !role) {
+    // Set the role in metadata
+    const roleToSet = roleParam.toUpperCase() as "TEACHER" | "STUDENT" | "PARENT";
+    await updateUserRole(roleToSet);
+    // Redirect to onboarding without query param to refresh session
+    redirect("/onboarding");
+  }
 
   return (
     <div className="min-h-screen flex flex-col relative">
