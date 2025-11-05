@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
@@ -91,7 +92,7 @@ export default function TeacherLessonsView({ lessons }: TeacherLessonsViewProps)
           const latestNote = lessonData.latestNote;
 
           return (
-            <Card key={lessonData.lesson.id}>
+            <Card key={lessonData.lesson.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-start gap-4">
                   {studentImage && (
@@ -106,12 +107,22 @@ export default function TeacherLessonsView({ lessons }: TeacherLessonsViewProps)
                     </div>
                   )}
                   <div className="flex-1">
-                    <CardTitle className="text-xl mb-1">
-                      {studentName} - {instrumentName}
-                    </CardTitle>
-                    <p className="text-muted-foreground">
-                      {dayName}s, {startTime} - {endTime}
-                    </p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <CardTitle className="text-xl mb-1">
+                          {studentName} - {instrumentName}
+                        </CardTitle>
+                        <p className="text-muted-foreground">
+                          {dayName}s, {startTime} - {endTime}
+                        </p>
+                      </div>
+                      <Link
+                        href={`/lessons/${lessonData.lesson.id}`}
+                        className="text-sm text-primary hover:underline whitespace-nowrap"
+                      >
+                        View Details →
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -119,7 +130,15 @@ export default function TeacherLessonsView({ lessons }: TeacherLessonsViewProps)
                 {latestNote && (
                   <div className="border-t pt-4">
                     <div className="flex items-start justify-between mb-2">
-                      <h4 className="font-semibold">Latest Notes</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold">Latest Notes</h4>
+                        <Link
+                          href={`/lessons/${lessonData.lesson.id}`}
+                          className="text-sm text-primary hover:underline"
+                        >
+                          View All →
+                        </Link>
+                      </div>
                       <div className="flex gap-2">
                         <Button
                           variant="outline"
@@ -156,7 +175,7 @@ export default function TeacherLessonsView({ lessons }: TeacherLessonsViewProps)
                     {latestNote.noteTitle && (
                       <p className="font-medium text-sm mb-2">{latestNote.noteTitle}</p>
                     )}
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-3">
                       {latestNote.notes}
                     </p>
                     <p className="text-xs text-muted-foreground mt-2">

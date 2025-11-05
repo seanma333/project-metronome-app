@@ -174,3 +174,56 @@ export async function getLessonNote(noteId: string) {
     return { error: "Failed to fetch lesson note" };
   }
 }
+
+export async function deleteLessonNote(noteId: string) {
+  try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return { error: "User not authenticated" };
+    }
+
+    // Get user from database
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.clerkId, clerkUser.id))
+      .limit(1);
+
+    if (user.length === 0) {
+      return { error: "User not found" };
+    }
+
+    const userData = user[0];
+
+    if (userData.role !== "TEACHER") {
+      return { error: "Only teachers can delete lesson notes" };
+    }
+
+    // Get the note with lesson to verify ownership
+    const noteData = await db
+      .select({
+        note: lessonNotes,
+        lesson: lessons,
+      })
+      .from(lessonNotes)
+      .innerJoin(lessons, eq(lessonNotes.lessonId, lessons.id))
+      .where(eq(lessonNotes.id, noteId))
+      .limit(1);
+
+    if (noteData.length === 0) {
+      return { error: "Note not found" };
+    }
+
+    if (noteData[0].lesson.teacherId !== userData.id) {
+      return { error: "Unauthorized: You can only delete notes for your own lessons" };
+    }
+
+    // Delete the note
+    await db.delete(lessonNotes).where(eq(lessonNotes.id, noteId));
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting lesson note:", error);
+    return { error: "Failed to delete lesson note" };
+  }
+}

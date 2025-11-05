@@ -10,7 +10,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/app/components/ui/accordion";
-import StudentLessonsView from "./StudentLessonsView";
 
 const DAYS_OF_WEEK = [
   "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
@@ -129,7 +128,7 @@ export default function ParentLessonsView({ students }: ParentLessonsViewProps) 
                       const latestNote = lessonData.latestNote;
 
                       return (
-                        <Card key={lessonData.lesson.id}>
+                        <Card key={lessonData.lesson.id} className="hover:shadow-md transition-shadow">
                           <CardHeader>
                             <div className="flex items-start gap-4">
                               {teacherImage && (
@@ -144,12 +143,22 @@ export default function ParentLessonsView({ students }: ParentLessonsViewProps) 
                                 </div>
                               )}
                               <div className="flex-1">
-                                <CardTitle className="text-xl mb-1">
-                                  {teacherName} - {instrumentName}
-                                </CardTitle>
-                                <p className="text-muted-foreground">
-                                  {dayName}s, {startTime} - {endTime}
-                                </p>
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1">
+                                    <CardTitle className="text-xl mb-1">
+                                      {teacherName} - {instrumentName}
+                                    </CardTitle>
+                                    <p className="text-muted-foreground">
+                                      {dayName}s, {startTime} - {endTime}
+                                    </p>
+                                  </div>
+                                  <Link
+                                    href={`/lessons/${lessonData.lesson.id}`}
+                                    className="text-sm text-primary hover:underline whitespace-nowrap"
+                                  >
+                                    View Details →
+                                  </Link>
+                                </div>
                               </div>
                             </div>
                           </CardHeader>
@@ -170,11 +179,19 @@ export default function ParentLessonsView({ students }: ParentLessonsViewProps) 
 
                             {latestNote && (
                               <div className="border-t pt-4">
-                                <h4 className="font-semibold mb-2">Latest Notes</h4>
+                                <div className="flex items-center justify-between mb-2">
+                                  <h4 className="font-semibold">Latest Notes</h4>
+                                  <Link
+                                    href={`/lessons/${lessonData.lesson.id}`}
+                                    className="text-sm text-primary hover:underline"
+                                  >
+                                    View All Notes →
+                                  </Link>
+                                </div>
                                 {latestNote.noteTitle && (
                                   <p className="font-medium text-sm mb-2">{latestNote.noteTitle}</p>
                                 )}
-                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-3">
                                   {latestNote.notes}
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-2">
@@ -188,6 +205,12 @@ export default function ParentLessonsView({ students }: ParentLessonsViewProps) 
                                 <p className="text-sm text-muted-foreground italic">
                                   No notes yet from the teacher.
                                 </p>
+                                <Link
+                                  href={`/lessons/${lessonData.lesson.id}`}
+                                  className="text-sm text-primary hover:underline mt-2 inline-block"
+                                >
+                                  View Lesson Details →
+                                </Link>
                               </div>
                             )}
                           </CardContent>
