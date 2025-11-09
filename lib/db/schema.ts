@@ -18,6 +18,12 @@ export const lessonFormatEnum = pgEnum("lesson_format", ["IN_PERSON", "ONLINE"])
 // Proficiency level enum for student instrument proficiency
 export const proficiencyEnum = pgEnum("proficiency_level", ["BEGINNER", "INTERMEDIATE", "ADVANCED"]);
 
+// Event status enum for calendar events
+export const eventStatusEnum = pgEnum("event_status", ["CONFIRMED", "TENTATIVE", "CANCELLED"]);
+
+// Event type enum for calendar events
+export const eventTypeEnum = pgEnum("event_type", ["LESSON", "AVAILABILITY", "PERSONAL", "OTHER"]);
+
 // PostGIS Geography type for spatial data
 const geography = customType<{ data: string; driverParam: string }>({
   dataType: () => 'geography(Point, 4326)',
@@ -302,5 +308,105 @@ export const userAddresses = pgTable("user_addresses", {
     userIdIdx: index("user_addresses_user_id_idx").on(table.userId),
     // Index for address lookups
     addressIdIdx: index("user_addresses_address_id_idx").on(table.addressId),
+  };
+});
+
+// Calendar events table - iCalendar compatible events with recurrence support
+export const calendarEvents = pgTable("calendar_events", {
+  id: uuid("id").primaryKey(),
+  // iCalendar UID - unique identifier for the event (required by iCalendar spec)
+  uid: varchar("uid", { length: 255 }).notNull().unique(),
+  // Event summary/title (SUMMARY in iCalendar)
+  summary: varchar("summary", { length: 255 }).notNull(),
+  // Event description (DESCRIPTION in iCalendar)
+  description: text("description"),
+  // Event location (LOCATION in iCalendar)
+  location: varchar("location", { length: 500 }),
+  // Start date/time (DTSTART in iCalendar) - stored in UTC
+  dtStart: timestamp("dt_start").notNull(),
+  // End date/time (DTEND in iCalendar) - stored in UTC
+  dtEnd: timestamp("dt_end").notNull(),
+  // All-day event flag
+  allDay: boolean("all_day").default(false).notNull(),
+  // Timezone for the event (TZID in iCalendar)
+  timezone: varchar("timezone", { length: 50 }),
+  // Recurrence rule (RRULE in iCalendar) - stores full RRULE string
+  rrule: text("rrule"),
+  // Recurrence exception dates (EXDATE in iCalendar) - JSON array of ISO date strings
+  exdates: jsonb("exdates"),
+  // Event status (STATUS in iCalendar)
+  status: eventStatusEnum("status").default("CONFIRMED").notNull(),
+  // Event type for categorization
+  eventType: eventTypeEnum("event_type").default("OTHER").notNull(),
+  // Priority (0-9, where 0 is undefined, 1 is highest, 9 is lowest)
+  priority: integer("priority").default(0),
+  // Event organizer/creator
+  organizerId: uuid("organizer_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // Related lesson (if this is a lesson event)
+  lessonId: uuid("lesson_id").references(() => lessons.id, { onDelete: "cascade" }),
+  // Related teacher timeslot (if this is an availability event)
+  timeslotId: uuid("timeslot_id").references(() => teacherTimeslots.id, { onDelete: "cascade" }),
+  // iCalendar sequence number for updates
+  sequence: integer("sequence").default(0).notNull(),
+  // Last modified timestamp (LAST-MODIFIED in iCalendar)
+  lastModified: timestamp("last_modified").defaultNow().notNull(),
+  // Created timestamp (CREATED in iCalendar)
+  created: timestamp("created").defaultNow().notNull(),
+  // Standard timestamps
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Index for UID lookups (required for iCalendar)
+    uidIdx: index("calendar_events_uid_idx").on(table.uid),
+    // Index for organizer lookups
+    organizerIdIdx: index("calendar_events_organizer_id_idx").on(table.organizerId),
+    // Index for date range queries
+    dtStartIdx: index("calendar_events_dt_start_idx").on(table.dtStart),
+    dtEndIdx: index("calendar_events_dt_end_idx").on(table.dtEnd),
+    // Index for event type queries
+    eventTypeIdx: index("calendar_events_event_type_idx").on(table.eventType),
+    // Index for status queries
+    statusIdx: index("calendar_events_status_idx").on(table.status),
+    // Index for lesson-related events
+    lessonIdIdx: index("calendar_events_lesson_id_idx").on(table.lessonId),
+    // Index for timeslot-related events
+    timeslotIdIdx: index("calendar_events_timeslot_id_idx").on(table.timeslotId),
+    // Composite index for organizer's events by date
+    organizerDateIdx: index("calendar_events_organizer_date_idx").on(table.organizerId, table.dtStart),
+    // Composite index for recurring events
+    rruleIdx: index("calendar_events_rrule_idx").on(table.rrule),
+  };
+});
+
+// Calendar event attendees table - for tracking event participants
+export const calendarEventAttendees = pgTable("calendar_event_attendees", {
+  id: uuid("id").primaryKey(),
+  eventId: uuid("event_id")
+    .notNull()
+    .references(() => calendarEvents.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // Participation status (PARTSTAT in iCalendar)
+  participationStatus: varchar("participation_status", { length: 20 }).default("NEEDS-ACTION").notNull(),
+  // Role (ROLE in iCalendar)
+  role: varchar("role", { length: 20 }).default("REQ-PARTICIPANT").notNull(),
+  // Response status tracking
+  responseRequested: boolean("response_requested").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Ensure one attendee record per user per event
+    uniqueEventUser: unique().on(table.eventId, table.userId),
+    // Index for event lookups
+    eventIdIdx: index("calendar_event_attendees_event_id_idx").on(table.eventId),
+    // Index for user lookups
+    userIdIdx: index("calendar_event_attendees_user_id_idx").on(table.userId),
+    // Index for participation status queries
+    participationStatusIdx: index("calendar_event_attendees_participation_status_idx").on(table.participationStatus),
   };
 });
