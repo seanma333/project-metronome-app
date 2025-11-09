@@ -11,24 +11,33 @@ const isPublicRoute = createRouteMatcher([
   "/teacher-profiles(.*)",
 ]);
 
-export default clerkMiddleware(async (auth, req) => {
-  const { userId, sessionClaims } = await auth();
+const authorizedParties = process.env.AUTHORIZED_PARTIES 
+  ? process.env.AUTHORIZED_PARTIES.split(',') 
+  : undefined;
 
-  // If user is logged in and not on a public route, check for role
-  if (userId && !isPublicRoute(req)) {
-    // Check both metadata and publicMetadata for role
-    // publicMetadata is the source of truth, but metadata might have it too
-    const publicMetadata = sessionClaims?.publicMetadata as { role?: string } | undefined;
-    const metadata = sessionClaims?.metadata as { role?: string } | undefined;
-    const role = publicMetadata?.role || metadata?.role;
-    const validRoles = ["TEACHER", "STUDENT", "PARENT"];
+export default clerkMiddleware(
+  async (auth, req) => {
+    const { userId, sessionClaims } = await auth();
 
-    // If no role or invalid role, redirect to onboarding
-    if (!role || !validRoles.includes(role.toUpperCase())) {
-      return NextResponse.redirect(new URL("/onboarding", req.url));
+    // If user is logged in and not on a public route, check for role
+    if (userId && !isPublicRoute(req)) {
+      // Check both metadata and publicMetadata for role
+      // publicMetadata is the source of truth, but metadata might have it too
+      const publicMetadata = sessionClaims?.publicMetadata as { role?: string } | undefined;
+      const metadata = sessionClaims?.metadata as { role?: string } | undefined;
+      const role = publicMetadata?.role || metadata?.role;
+      const validRoles = ["TEACHER", "STUDENT", "PARENT"];
+
+      // If no role or invalid role, redirect to onboarding
+      if (!role || !validRoles.includes(role.toUpperCase())) {
+        return NextResponse.redirect(new URL("/onboarding", req.url));
+      }
     }
+  },
+  {
+    authorizedParties,
   }
-});
+);
 
 export const config = {
   matcher: [

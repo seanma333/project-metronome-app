@@ -36,8 +36,9 @@ Please create a biography that:
 - Highlights qualifications and experience
 - Shows personality and teaching philosophy
 - Appeals to potential students and parents
-- Is under 2000 characters
+- Is under 1000 characters
 - Uses a warm, approachable tone
+- Does not include a header or footer
 - Writes in first person about ${teacherName}
 
 Biography:`;

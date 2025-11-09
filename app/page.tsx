@@ -2,7 +2,7 @@ import Navbar from "./components/common/Navbar";
 import Hero from "./components/landing/Hero";
 import HowItWorks from "./components/landing/HowItWorks";
 import Features from "./components/landing/Features";
-import FAQ from "./components/landing/FAQ";
+import FAQ from "./components/landing/FAQClient";
 import Footer from "./components/common/Footer";
 
 export default function Home() {

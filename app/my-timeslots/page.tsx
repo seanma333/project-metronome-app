@@ -37,7 +37,7 @@ export default async function MyTimeslotsPage() {
             <p className="text-muted-foreground mb-6 max-w-3xl">
               Manage your weekly availability by creating, moving, and editing time slots.
               Hover over empty grid cells to add new 15-minute slots, drag existing slots to move them,
-              resize them by dragging the top or bottom edges, or delete them by hovering and clicking the delete button.
+              and resize them by dragging the top or bottom edges. Click the edit button on any slot to modify its teaching format or delete it.
               All changes are automatically saved.
             </p>
             <AcceptingStudentsCheckbox initialValue={preferences?.teacher?.acceptingStudents ?? false} />

@@ -8,8 +8,18 @@ import { updateTeacherTimeslot } from "@/app/actions/update-teacher-timeslot";
 import { deleteTeacherTimeslot } from "@/app/actions/delete-teacher-timeslot";
 import { createTeacherTimeslot } from "@/app/actions/create-teacher-timeslot";
 import { updateTeachingFormat } from "@/app/actions/update-teacher-preferences";
+import { getLessonByTimeslot } from "@/app/actions/get-lesson-by-timeslot";
 import { RadioGroup, RadioGroupItem } from "@/app/components/ui/radio-group";
 import { Label } from "@/app/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/app/components/ui/dialog";
+import { Button } from "@/app/components/ui/button";
 
 interface Timeslot {
   id: string;
@@ -119,10 +129,18 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
   const [gridReady, setGridReady] = useState(false);
   const [savingTimeslotId, setSavingTimeslotId] = useState<string | null>(null);
   const [hoveredTimeslotId, setHoveredTimeslotId] = useState<string | null>(null);
-  const [deleteConfirmTimeslotId, setDeleteConfirmTimeslotId] = useState<string | null>(null);
   const [hoveredGridCell, setHoveredGridCell] = useState<{ day: number; timeSlot: string } | null>(null);
-  const [editTimeslotId, setEditTimeslotId] = useState<string | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingTimeslot, setEditingTimeslot] = useState<Timeslot | null>(null);
   const [editTeachingFormat, setEditTeachingFormat] = useState<"IN_PERSON_ONLY" | "ONLINE_ONLY" | "IN_PERSON_AND_ONLINE" | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewingLesson, setViewingLesson] = useState<{
+    lessonId: string;
+    student: { firstName: string | null; lastName: string | null; imageUrl: string | null };
+    instrument: { name: string; imagePath: string };
+    lessonFormat: string;
+  } | null>(null);
+  const [loadingLesson, setLoadingLesson] = useState(false);
   const gridContainerRef = useRef<HTMLDivElement>(null);
 
   // Keep track of teacher's preferred teaching format
@@ -385,12 +403,35 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
     }
   };
 
+  // Handle view lesson
+  const handleViewLesson = async (timeslotId: string) => {
+    setLoadingLesson(true);
+    setViewDialogOpen(true);
+    
+    const result = await getLessonByTimeslot(timeslotId);
+    
+    if (result.error || !result.lesson) {
+      console.error("Failed to fetch lesson:", result.error);
+      setViewDialogOpen(false);
+    } else {
+      setViewingLesson({
+        lessonId: result.lesson.lesson.id,
+        student: result.lesson.student,
+        instrument: result.lesson.instrument,
+        lessonFormat: result.lesson.lesson.lessonFormat,
+      });
+    }
+    
+    setLoadingLesson(false);
+  };
+
   // Handle delete timeslot
   const handleDeleteTimeslot = async (timeslotId: string) => {
     // Optimistically remove from UI
     const deletedTimeslot = timeslots.find((slot) => slot.id === timeslotId);
     setTimeslots((prev) => prev.filter((slot) => slot.id !== timeslotId));
-    setDeleteConfirmTimeslotId(null);
+    setEditDialogOpen(false);
+    setEditingTimeslot(null);
     setHoveredTimeslotId(null);
 
     // Persist deletion to backend
@@ -589,11 +630,13 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
 
             if (timeslot.isBooked) {
               // Render booked timeslots as static elements (not draggable/resizable)
+              const isBookedHovered = hoveredTimeslotId === timeslot.id;
+              
               return (
                 <div
                   key={timeslot.id}
                   className={cn(
-                    "absolute rounded px-1.5 py-0.5 text-xs z-10",
+                    "absolute rounded px-1.5 py-0.5 text-xs",
                     "flex flex-col justify-center",
                     "bg-green-500/20 border border-green-500/40 text-green-700 dark:text-green-400"
                   )}
@@ -603,13 +646,39 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
                     top: `${y}px`,
                     height: `${Math.max(height, 24)}px`,
                     minHeight: "24px",
+                    zIndex: isBookedHovered ? 25 : 10,
                   }}
-                  onMouseEnter={() => setHoveredGridCell(null)}
+                  onMouseEnter={() => {
+                    setHoveredTimeslotId(timeslot.id);
+                    setHoveredGridCell(null);
+                  }}
+                  onMouseLeave={() => {
+                    setHoveredTimeslotId(null);
+                  }}
                 >
-                  <div className="font-medium text-[11px] leading-tight">
+                  {/* View button - appears on hover */}
+                  {isBookedHovered && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewLesson(timeslot.id);
+                      }}
+                      className="absolute top-1 right-1 z-30 p-1 rounded bg-background border border-border shadow-sm hover:bg-primary/10 hover:border-primary transition-colors group"
+                    >
+                      <Image
+                        src="/svg/view_button.svg"
+                        alt="View"
+                        width={16}
+                        height={16}
+                        className="group-hover:brightness-0 group-hover:saturate-100 group-hover:invert-[0.35] group-hover:sepia-[1] group-hover:hue-rotate-[320deg] transition-all"
+                      />
+                    </button>
+                  )}
+                  
+                  <div className="font-medium text-[11px] leading-tight pointer-events-none">
                     {formatTimeAMPM(timeslot.startTime)} - {formatTimeAMPM(timeslot.endTime)}
                   </div>
-                  <div className="text-[9px] opacity-75 leading-tight">
+                  <div className="text-[9px] opacity-75 leading-tight pointer-events-none">
                     Booked · {formatTeachingFormat(timeslot.teachingFormat)}
                   </div>
                 </div>
@@ -619,13 +688,6 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
             // Render draggable/resizable timeslots
             const timeColumnWidth = dayColumnWidth;
             const isHovered = hoveredTimeslotId === timeslot.id;
-            const showDeleteConfirm = deleteConfirmTimeslotId === timeslot.id;
-            const isEditModalOpen = editTimeslotId === timeslot.id;
-
-            // Calculate if modal should appear above the timeslot (if near bottom of grid)
-            // Modal is approximately 220px tall, so check if y + height + 220 would exceed grid height
-            const modalHeight = 220;
-            const shouldShowModalAbove = (isEditModalOpen || showDeleteConfirm) && (y + height + modalHeight > totalGridHeight);
 
             return (
               <Rnd
@@ -675,206 +737,28 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
                   setHoveredGridCell(null); // Clear grid hover when hovering over timeslot
                 }}
                 onMouseLeave={() => {
-                  if (!showDeleteConfirm && editTimeslotId !== timeslot.id) {
-                    setHoveredTimeslotId(null);
-                  }
+                  setHoveredTimeslotId(null);
                 }}
               >
-                {/* Edit and Delete buttons - appear on hover */}
-                {isHovered && !showDeleteConfirm && editTimeslotId !== timeslot.id && (
-                  <>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditTimeslotId(timeslot.id);
-                        setEditTeachingFormat(timeslot.teachingFormat as "IN_PERSON_ONLY" | "ONLINE_ONLY" | "IN_PERSON_AND_ONLINE");
-                      }}
-                      className="absolute top-1 right-10 z-30 p-1 rounded bg-background border border-border shadow-sm hover:bg-green-500/10 hover:border-green-500 transition-colors group"
-                    >
-                      <Image
-                        src="/svg/edit_button.svg"
-                        alt="Edit"
-                        width={16}
-                        height={16}
-                        className="group-hover:brightness-0 group-hover:saturate-100 group-hover:invert-[0.35] group-hover:sepia-[1] group-hover:hue-rotate-[320deg] transition-all"
-                      />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteConfirmTimeslotId(timeslot.id);
-                      }}
-                      className="absolute top-1 right-1 z-30 p-1 rounded bg-background border border-border shadow-sm hover:bg-destructive/10 hover:border-destructive transition-colors group"
-                    >
-                      <Image
-                        src="/svg/delete_button.svg"
-                        alt="Delete"
-                        width={16}
-                        height={16}
-                        className="group-hover:brightness-0 group-hover:saturate-100 group-hover:invert-[0.35] group-hover:sepia-[1] group-hover:hue-rotate-[320deg] transition-all"
-                      />
-                    </button>
-                  </>
-                )}
-
-                {/* Edit modal */}
-                {editTimeslotId === timeslot.id && editTeachingFormat !== null && (
-                  <div
-                    className={cn(
-                      "absolute right-1 bg-background border border-border rounded-lg shadow-lg p-4 min-w-[280px]",
-                      shouldShowModalAbove ? "bottom-full mb-2" : "top-8"
-                    )}
-                    style={{ zIndex: 50 }}
-                    onMouseEnter={() => setHoveredTimeslotId(timeslot.id)}
-                    onMouseLeave={() => {
-                      // Keep modal open on mouse leave
+                {/* Edit button - appears on hover */}
+                {isHovered && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingTimeslot(timeslot);
+                      setEditTeachingFormat(timeslot.teachingFormat as "IN_PERSON_ONLY" | "ONLINE_ONLY" | "IN_PERSON_AND_ONLINE");
+                      setEditDialogOpen(true);
                     }}
+                    className="absolute top-1 right-1 z-30 p-1 rounded bg-background border border-border shadow-sm hover:bg-primary/10 hover:border-primary transition-colors group"
                   >
-                    <h3 className="text-sm font-semibold text-foreground mb-3">
-                      Edit Teaching Format
-                    </h3>
-                    <RadioGroup
-                      value={editTeachingFormat}
-                      onValueChange={(value) => setEditTeachingFormat(value as "IN_PERSON_ONLY" | "ONLINE_ONLY" | "IN_PERSON_AND_ONLINE")}
-                      className="mb-3"
-                    >
-                      <div className="flex items-center space-x-2 mb-2">
-                        <RadioGroupItem value="ONLINE_ONLY" id={`edit-online-${timeslot.id}`} />
-                        <Label htmlFor={`edit-online-${timeslot.id}`} className="font-normal cursor-pointer text-sm">
-                          Online
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2 mb-2">
-                        <RadioGroupItem value="IN_PERSON_ONLY" id={`edit-inperson-${timeslot.id}`} />
-                        <Label htmlFor={`edit-inperson-${timeslot.id}`} className="font-normal cursor-pointer text-sm">
-                          In-Person
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="IN_PERSON_AND_ONLINE" id={`edit-both-${timeslot.id}`} />
-                        <Label htmlFor={`edit-both-${timeslot.id}`} className="font-normal cursor-pointer text-sm">
-                          Online or In-Person
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                    {(teachingFormat === "ONLINE_ONLY" || teachingFormat === "IN_PERSON_ONLY") &&
-                      editTeachingFormat !== teachingFormat &&
-                      (editTeachingFormat === "IN_PERSON_AND_ONLINE" ||
-                       (teachingFormat === "ONLINE_ONLY" && editTeachingFormat === "IN_PERSON_ONLY") ||
-                       (teachingFormat === "IN_PERSON_ONLY" && editTeachingFormat === "ONLINE_ONLY")) && (
-                        <div className="mb-3 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-xs text-yellow-700 dark:text-yellow-400">
-                          This will also change your preferred teaching format to allow for both, which will have you be searchable by students for both online and in-person lessons.
-                        </div>
-                      )}
-                    <div className="flex gap-2 justify-end">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditTimeslotId(null);
-                          setEditTeachingFormat(null);
-                          setHoveredTimeslotId(null);
-                        }}
-                        className="px-3 py-1.5 text-sm bg-muted text-muted-foreground rounded hover:bg-muted/80 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          if (editTeachingFormat === null) return;
-
-                          const timeslotToEdit = timeslots.find((s) => s.id === timeslot.id);
-                          if (!timeslotToEdit) return;
-
-                          // Check if we need to update teacher's preferred format
-                          // Only update if changing from ONLINE_ONLY/IN_PERSON_ONLY to the other or to BOTH
-                          const needsFormatUpdate = (teachingFormat === "ONLINE_ONLY" || teachingFormat === "IN_PERSON_ONLY") &&
-                            editTeachingFormat !== teachingFormat &&
-                            (editTeachingFormat === "IN_PERSON_AND_ONLINE" ||
-                             (teachingFormat === "ONLINE_ONLY" && editTeachingFormat === "IN_PERSON_ONLY") ||
-                             (teachingFormat === "IN_PERSON_ONLY" && editTeachingFormat === "ONLINE_ONLY"));
-
-                          // Update timeslot
-                          const result = await updateTeacherTimeslot({
-                            timeslotId: timeslot.id,
-                            dayOfWeek: timeslotToEdit.dayOfWeek,
-                            startTime: timeslotToEdit.startTime,
-                            endTime: timeslotToEdit.endTime,
-                            teachingFormat: editTeachingFormat,
-                          });
-
-                          if (result.error) {
-                            console.error("Failed to update timeslot:", result.error);
-                          } else {
-                            // Update local state
-                            setTimeslots((prev) =>
-                              prev.map((slot) =>
-                                slot.id === timeslot.id
-                                  ? { ...slot, teachingFormat: editTeachingFormat }
-                                  : slot
-                              )
-                            );
-
-                            // Update teacher's preferred format if needed
-                            if (needsFormatUpdate) {
-                              const formatResult = await updateTeachingFormat("IN_PERSON_AND_ONLINE");
-                              if (!formatResult.error) {
-                                setTeachingFormat("IN_PERSON_AND_ONLINE");
-                              }
-                            }
-
-                            setEditTimeslotId(null);
-                            setEditTeachingFormat(null);
-                            setHoveredTimeslotId(null);
-                          }
-                        }}
-                        className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                      >
-                        Save
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Confirmation dialog */}
-                {showDeleteConfirm && (
-                  <div
-                    className={cn(
-                      "absolute right-1 bg-background border border-border rounded-lg shadow-lg p-3 min-w-[200px]",
-                      shouldShowModalAbove ? "bottom-full mb-2" : "top-8"
-                    )}
-                    style={{ zIndex: 50 }}
-                    onMouseEnter={() => setHoveredTimeslotId(timeslot.id)}
-                    onMouseLeave={() => {
-                      setHoveredTimeslotId(null);
-                      setDeleteConfirmTimeslotId(null);
-                    }}
-                  >
-                    <p className="text-sm text-foreground mb-3 text-center">
-                      Delete this timeslot?
-                    </p>
-                    <div className="flex gap-2 justify-center">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteTimeslot(timeslot.id);
-                        }}
-                        className="px-3 py-1.5 text-sm bg-destructive text-white rounded hover:bg-destructive/90 transition-colors"
-                      >
-                        Yes
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteConfirmTimeslotId(null);
-                          setHoveredTimeslotId(null);
-                        }}
-                        className="px-3 py-1.5 text-sm bg-muted text-muted-foreground rounded hover:bg-muted/80 transition-colors"
-                      >
-                        No
-                      </button>
-                    </div>
-                  </div>
+                    <Image
+                      src="/svg/edit_button.svg"
+                      alt="Edit"
+                      width={16}
+                      height={16}
+                      className="group-hover:brightness-0 group-hover:saturate-100 group-hover:invert-[0.35] group-hover:sepia-[1] group-hover:hue-rotate-[320deg] transition-all"
+                    />
+                  </button>
                 )}
 
                 <div className="font-medium text-[11px] leading-tight pointer-events-none">
@@ -888,6 +772,248 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
           })}
         </div>
       </div>
+
+      {/* Edit/Delete Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Timeslot</DialogTitle>
+            <DialogDescription>
+              {editingTimeslot && (
+                <span>
+                  {DAYS_OF_WEEK.find(d => d.value === editingTimeslot.dayOfWeek)?.label}, {formatTimeAMPM(editingTimeslot.startTime)} - {formatTimeAMPM(editingTimeslot.endTime)}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingTimeslot && editTeachingFormat && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground mb-3">
+                  Teaching Format
+                </h3>
+                <RadioGroup
+                  value={editTeachingFormat}
+                  onValueChange={(value) => setEditTeachingFormat(value as "IN_PERSON_ONLY" | "ONLINE_ONLY" | "IN_PERSON_AND_ONLINE")}
+                >
+                  <div className="flex items-center space-x-2 mb-2">
+                    <RadioGroupItem value="ONLINE_ONLY" id="edit-online" />
+                    <Label htmlFor="edit-online" className="font-normal cursor-pointer text-sm">
+                      Online
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <RadioGroupItem value="IN_PERSON_ONLY" id="edit-inperson" />
+                    <Label htmlFor="edit-inperson" className="font-normal cursor-pointer text-sm">
+                      In-Person
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="IN_PERSON_AND_ONLINE" id="edit-both" />
+                    <Label htmlFor="edit-both" className="font-normal cursor-pointer text-sm">
+                      Online or In-Person
+                    </Label>
+                  </div>
+                </RadioGroup>
+                {(teachingFormat === "ONLINE_ONLY" || teachingFormat === "IN_PERSON_ONLY") &&
+                  editTeachingFormat !== teachingFormat &&
+                  (editTeachingFormat === "IN_PERSON_AND_ONLINE" ||
+                   (teachingFormat === "ONLINE_ONLY" && editTeachingFormat === "IN_PERSON_ONLY") ||
+                   (teachingFormat === "IN_PERSON_ONLY" && editTeachingFormat === "ONLINE_ONLY")) && (
+                    <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded text-xs text-yellow-700 dark:text-yellow-400">
+                      This will also change your preferred teaching format to allow for both, which will have you be searchable by students for both online and in-person lessons.
+                    </div>
+                  )}
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-semibold text-foreground mb-2">
+                  Delete Timeslot
+                </h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Remove this timeslot from your schedule. This action cannot be undone.
+                </p>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    if (editingTimeslot) {
+                      handleDeleteTimeslot(editingTimeslot.id);
+                    }
+                  }}
+                  className="w-full"
+                >
+                  Delete Timeslot
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditDialogOpen(false);
+                setEditingTimeslot(null);
+                setEditTeachingFormat(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!editingTimeslot || editTeachingFormat === null) return;
+
+                // Check if we need to update teacher's preferred format
+                const needsFormatUpdate = (teachingFormat === "ONLINE_ONLY" || teachingFormat === "IN_PERSON_ONLY") &&
+                  editTeachingFormat !== teachingFormat &&
+                  (editTeachingFormat === "IN_PERSON_AND_ONLINE" ||
+                   (teachingFormat === "ONLINE_ONLY" && editTeachingFormat === "IN_PERSON_ONLY") ||
+                   (teachingFormat === "IN_PERSON_ONLY" && editTeachingFormat === "ONLINE_ONLY"));
+
+                // Update timeslot
+                const result = await updateTeacherTimeslot({
+                  timeslotId: editingTimeslot.id,
+                  dayOfWeek: editingTimeslot.dayOfWeek,
+                  startTime: editingTimeslot.startTime,
+                  endTime: editingTimeslot.endTime,
+                  teachingFormat: editTeachingFormat,
+                });
+
+                if (result.error) {
+                  console.error("Failed to update timeslot:", result.error);
+                } else {
+                  // Update local state
+                  setTimeslots((prev) =>
+                    prev.map((slot) =>
+                      slot.id === editingTimeslot.id
+                        ? { ...slot, teachingFormat: editTeachingFormat }
+                        : slot
+                    )
+                  );
+
+                  // Update teacher's preferred format if needed
+                  if (needsFormatUpdate) {
+                    const formatResult = await updateTeachingFormat("IN_PERSON_AND_ONLINE");
+                    if (!formatResult.error) {
+                      setTeachingFormat("IN_PERSON_AND_ONLINE");
+                    }
+                  }
+
+                  setEditDialogOpen(false);
+                  setEditingTimeslot(null);
+                  setEditTeachingFormat(null);
+                }
+              }}
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Lesson Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={(open) => {
+        setViewDialogOpen(open);
+        if (!open) {
+          setViewingLesson(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle>Lesson Details</DialogTitle>
+            <DialogDescription>
+              Information about the booked lesson
+            </DialogDescription>
+          </DialogHeader>
+
+          {loadingLesson ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-sm text-muted-foreground">Loading lesson details...</div>
+            </div>
+          ) : viewingLesson ? (
+            <div className="space-y-6">
+              {/* Student Information */}
+              <div>
+                <h3 className="text-sm font-semibold text-foreground mb-3">
+                  Student
+                </h3>
+                <div className="flex items-center space-x-3 p-3 bg-muted/50 rounded-lg">
+                  {viewingLesson.student.imageUrl ? (
+                    <Image
+                      src={viewingLesson.student.imageUrl}
+                      alt={`${viewingLesson.student.firstName || ''} ${viewingLesson.student.lastName || ''}`}
+                      width={48}
+                      height={48}
+                      className="rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                      <span className="text-lg font-semibold text-primary">
+                        {(viewingLesson.student.firstName?.[0] || '?').toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {viewingLesson.student.firstName} {viewingLesson.student.lastName}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Instrument Information */}
+              <div>
+                <h3 className="text-sm font-semibold text-foreground mb-3">
+                  Instrument
+                </h3>
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <p className="font-medium text-foreground">
+                    {viewingLesson.instrument.name}
+                  </p>
+                </div>
+              </div>
+
+              {/* Lesson Format */}
+              <div>
+                <h3 className="text-sm font-semibold text-foreground mb-3">
+                  Lesson Format
+                </h3>
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <p className="text-foreground">
+                    {viewingLesson.lessonFormat === "ONLINE" ? "Online" : "In-Person"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-sm text-muted-foreground">No lesson data available</div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setViewDialogOpen(false);
+                setViewingLesson(null);
+              }}
+            >
+              Close
+            </Button>
+            {viewingLesson && (
+              <Button
+                onClick={() => {
+                  window.location.href = `/lessons/${viewingLesson.lessonId}`;
+                }}
+              >
+                Go to Lesson
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -103,7 +103,7 @@ async function geocodeAddress(
 
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "TempoLink/1.0 (Contact: support@tempolink.com)", // Nominatim requires User-Agent
+        "User-Agent": "TempoLink/1.0 (Contact: support@tempo-link.xyz", // Nominatim requires User-Agent
       },
     });
 
