@@ -20,7 +20,7 @@ export default function Hero() {
             <Link href="/search">Find a Teacher</Link>
           </Button>
           <Button size="lg" variant="outline" asChild className="text-lg px-8">
-            <Link href="/signup?role=teacher">I'm a Teacher</Link>
+            <Link href="/sign-up?role=teacher">I'm a Teacher</Link>
           </Button>
         </>
       );
@@ -70,7 +70,7 @@ export default function Hero() {
           <Link href="/search">Find a Teacher</Link>
         </Button>
         <Button size="lg" variant="outline" asChild className="text-lg px-8">
-          <Link href="/signup?role=teacher">I'm a Teacher</Link>
+          <Link href="/sign-up?role=teacher">I'm a Teacher</Link>
         </Button>
       </>
     );

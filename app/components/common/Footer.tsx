@@ -87,7 +87,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/signup?role=student"
+                  href="/sign-up?role=student"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   Sign Up
@@ -126,7 +126,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/signup?role=teacher"
+                  href="/sign-up?role=teacher"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   Create Profile

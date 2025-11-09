@@ -12,12 +12,14 @@ export default function SignUpWithRole() {
   const searchParams = useSearchParams();
   const roleParam = searchParams.get("role");
 
-  const [selectedRole, setSelectedRole] = useState<Role | null>(
-    roleParam && ["TEACHER", "STUDENT", "PARENT"].includes(roleParam.toUpperCase())
-      ? (roleParam.toUpperCase() as Role)
-      : null
-  );
-  const [roleConfirmed, setRoleConfirmed] = useState(false);
+  // Normalize role param (e.g., "teacher" -> "TEACHER")
+  const normalizedRole = roleParam && ["TEACHER", "STUDENT", "PARENT"].includes(roleParam.toUpperCase())
+    ? (roleParam.toUpperCase() as Role)
+    : null;
+
+  const [selectedRole, setSelectedRole] = useState<Role | null>(normalizedRole);
+  // Auto-confirm if role is provided in URL
+  const [roleConfirmed, setRoleConfirmed] = useState(!!normalizedRole);
 
   const handleRoleSelect = (role: Role) => {
     setSelectedRole(role);
