@@ -2,7 +2,7 @@
 
 import { ReactNode } from "react";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
+import { cn, shouldUnoptimizeImages } from "@/lib/utils";
 
 interface ProfileSectionProps {
   title: string;
@@ -40,6 +40,7 @@ export default function ProfileSection({
               width={20}
               height={20}
               className="object-contain"
+              unoptimized={shouldUnoptimizeImages()}
             />
           </button>
         )}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { shouldUnoptimizeImages } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
@@ -245,6 +246,7 @@ export default function TeacherBookingRequests({
                             width={48}
                             height={48}
                             className="w-full h-full object-cover"
+                            unoptimized={shouldUnoptimizeImages()}
                           />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -288,6 +290,7 @@ export default function TeacherBookingRequests({
                                   width={16}
                                   height={16}
                                   className="w-4 h-4"
+                                  unoptimized={shouldUnoptimizeImages()}
                                 />
                                 Contact
                               </a>

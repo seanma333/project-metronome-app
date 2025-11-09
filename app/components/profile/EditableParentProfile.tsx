@@ -23,6 +23,7 @@ import {
   removeStudentInstrumentProficiency,
 } from "@/app/actions/manage-instrument-proficiency";
 import ProficiencyBadge from "./ProficiencyBadge";
+import { shouldUnoptimizeImages } from "@/lib/utils";
 
 type ProficiencyLevel = "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
 
@@ -378,6 +379,7 @@ export default function EditableParentProfile({
                 fill
                 className="object-cover"
                 sizes="192px"
+                unoptimized={shouldUnoptimizeImages()}
               />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <button
@@ -391,6 +393,7 @@ export default function EditableParentProfile({
                     width={20}
                     height={20}
                     className="object-contain"
+                    unoptimized={shouldUnoptimizeImages()}
                   />
                   <span className="text-sm font-medium text-foreground">
                     {isUploadingImage ? "Uploading..." : "Upload"}
@@ -453,6 +456,7 @@ export default function EditableParentProfile({
                         width={20}
                         height={20}
                         className="object-contain"
+                        unoptimized={shouldUnoptimizeImages()}
                       />
                     </button>
                   </div>
@@ -479,6 +483,7 @@ export default function EditableParentProfile({
               width={20}
               height={20}
               className="object-contain"
+              unoptimized={shouldUnoptimizeImages()}
             />
             <span>Add Student</span>
           </button>
@@ -555,6 +560,7 @@ export default function EditableParentProfile({
                         width={20}
                         height={20}
                         className="object-contain"
+                        unoptimized={shouldUnoptimizeImages()}
                       />
                     </button>
                     <AlertDialog>
@@ -569,6 +575,7 @@ export default function EditableParentProfile({
                             width={20}
                             height={20}
                             className="object-contain"
+                            unoptimized={shouldUnoptimizeImages()}
                           />
                         </button>
                       </AlertDialogTrigger>
@@ -657,6 +664,7 @@ export default function EditableParentProfile({
                                       width={16}
                                       height={16}
                                       className="object-contain"
+                                      unoptimized={shouldUnoptimizeImages()}
                                     />
                                   </Button>
                                 </AlertDialogTrigger>

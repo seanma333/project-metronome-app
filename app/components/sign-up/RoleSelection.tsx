@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { RadioGroup, RadioGroupItem } from "@/app/components/ui/radio-group";
 import { Label } from "@/app/components/ui/label";
-import { cn } from "@/lib/utils";
+import { cn, shouldUnoptimizeImages } from "@/lib/utils";
 
 type Role = "TEACHER" | "STUDENT" | "PARENT";
 
@@ -82,6 +82,7 @@ export default function RoleSelection({ selectedRole, onRoleChange }: RoleSelect
                         "object-contain rounded-lg",
                         isSelected ? "opacity-100" : "opacity-70"
                       )}
+                      unoptimized={shouldUnoptimizeImages()}
                     />
                   </div>
                   <div className="flex-1 space-y-1">

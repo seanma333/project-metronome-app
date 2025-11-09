@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { shouldUnoptimizeImages } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { createLessonNote, updateLessonNote, getLessonNote } from "@/app/actions/manage-lesson-notes";
@@ -103,6 +104,7 @@ export default function TeacherLessonsView({ lessons }: TeacherLessonsViewProps)
                         width={64}
                         height={64}
                         className="w-full h-full object-cover"
+                        unoptimized={shouldUnoptimizeImages()}
                       />
                     </div>
                   )}
@@ -152,6 +154,7 @@ export default function TeacherLessonsView({ lessons }: TeacherLessonsViewProps)
                             width={16}
                             height={16}
                             className="w-4 h-4"
+                            unoptimized={shouldUnoptimizeImages()}
                           />
                           Edit
                         </Button>
@@ -167,6 +170,7 @@ export default function TeacherLessonsView({ lessons }: TeacherLessonsViewProps)
                             width={16}
                             height={16}
                             className="w-4 h-4"
+                            unoptimized={shouldUnoptimizeImages()}
                           />
                           New Note
                         </Button>

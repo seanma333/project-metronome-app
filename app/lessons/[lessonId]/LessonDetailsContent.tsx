@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { shouldUnoptimizeImages } from "@/lib/utils";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
@@ -164,6 +165,7 @@ export default function LessonDetailsContent({ lesson, user }: LessonDetailsCont
                     width={64}
                     height={64}
                     className="w-full h-full object-cover"
+                    unoptimized={shouldUnoptimizeImages()}
                   />
                 </div>
               )}
@@ -211,6 +213,7 @@ export default function LessonDetailsContent({ lesson, user }: LessonDetailsCont
                   width={16}
                   height={16}
                   className="w-4 h-4"
+                  unoptimized={shouldUnoptimizeImages()}
                 />
                 Add Note
               </Button>
@@ -270,6 +273,7 @@ export default function LessonDetailsContent({ lesson, user }: LessonDetailsCont
                               width={16}
                               height={16}
                               className="w-4 h-4"
+                              unoptimized={shouldUnoptimizeImages()}
                             />
                             Edit
                           </Button>
@@ -287,6 +291,7 @@ export default function LessonDetailsContent({ lesson, user }: LessonDetailsCont
                                   width={16}
                                   height={16}
                                   className="w-4 h-4"
+                                  unoptimized={shouldUnoptimizeImages()}
                                 />
                                 {deletingNotes.has(note.id) ? "Deleting..." : "Delete"}
                               </Button>

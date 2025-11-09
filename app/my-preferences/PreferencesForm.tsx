@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { shouldUnoptimizeImages } from "@/lib/utils";
 import TimezoneSelect from "react-timezone-select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Label } from "@/app/components/ui/label";
@@ -435,6 +436,7 @@ export default function PreferencesForm({
                     width={20}
                     height={20}
                     className="object-contain"
+                    unoptimized={shouldUnoptimizeImages()}
                   />
                   <span>Add Address</span>
                 </button>

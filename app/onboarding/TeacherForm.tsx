@@ -11,7 +11,7 @@ import Image from "next/image";
 import { saveTeacherProfile } from "@/app/actions/save-teacher-profile";
 import { getInstruments, getLanguages } from "@/app/actions/get-instruments-languages";
 import { generateUniqueProfileName } from "@/app/actions/generate-profile-name";
-import { cn } from "@/lib/utils";
+import { cn, shouldUnoptimizeImages } from "@/lib/utils";
 
 interface TeacherFormProps {
   firstName: string;
@@ -210,6 +210,7 @@ export default function TeacherForm({ firstName: defaultFirstName, lastName: def
                   width={20}
                   height={20}
                   className="object-contain"
+                  unoptimized={shouldUnoptimizeImages()}
                 />
                 <span>{instrument.name}</span>
               </button>

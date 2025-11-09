@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { shouldUnoptimizeImages } from "@/lib/utils";
 import { Button } from "@/app/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/app/components/ui/radio-group";
 import { Label } from "@/app/components/ui/label";
@@ -480,6 +481,7 @@ export default function RequestBookingContent({
                   alt={displayName}
                   fill
                   className="object-cover"
+                  unoptimized={shouldUnoptimizeImages()}
                 />
               </div>
               <div className="text-center">

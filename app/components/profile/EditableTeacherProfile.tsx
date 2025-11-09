@@ -20,6 +20,7 @@ import {
 import { updateTeacherName } from "@/app/actions/update-teacher-name";
 import { updateTeacherImageUrl } from "@/app/actions/update-teacher-image";
 import { getInstruments, getLanguages } from "@/app/actions/get-instruments-languages";
+import { shouldUnoptimizeImages } from "@/lib/utils";
 
 interface EditableTeacherProfileProps {
   teacher: {
@@ -291,6 +292,7 @@ export default function EditableTeacherProfile({
               fill
               className="object-cover"
               sizes="192px"
+              unoptimized={shouldUnoptimizeImages()}
             />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <button
@@ -304,6 +306,7 @@ export default function EditableTeacherProfile({
                   width={20}
                   height={20}
                   className="object-contain"
+                  unoptimized={shouldUnoptimizeImages()}
                 />
                 <span className="text-sm font-medium text-foreground">
                   {isUploadingImage ? "Uploading..." : "Upload"}
@@ -372,6 +375,7 @@ export default function EditableTeacherProfile({
                       width={20}
                       height={20}
                       className="object-contain"
+                      unoptimized={shouldUnoptimizeImages()}
                     />
                   </button>
                 </div>

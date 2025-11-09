@@ -1,6 +1,7 @@
 import { SignIn } from "@clerk/nextjs";
 import Link from "next/link";
 import Image from "next/image";
+import { shouldUnoptimizeImages } from "@/lib/utils";
 
 export default function SignInPage() {
   return (
@@ -22,6 +23,7 @@ export default function SignInPage() {
               width={32}
               height={32}
               className="h-8 w-auto"
+              unoptimized={shouldUnoptimizeImages()}
             />
             <span className="text-lg font-bold text-primary">TempoLink</span>
           </Link>

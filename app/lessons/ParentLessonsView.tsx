@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { shouldUnoptimizeImages } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import {
@@ -97,6 +98,7 @@ export default function ParentLessonsView({ students }: ParentLessonsViewProps) 
                         width={40}
                         height={40}
                         className="w-full h-full object-cover"
+                        unoptimized={shouldUnoptimizeImages()}
                       />
                     </div>
                   )}
@@ -139,6 +141,7 @@ export default function ParentLessonsView({ students }: ParentLessonsViewProps) 
                                     width={64}
                                     height={64}
                                     className="w-full h-full object-cover"
+                                    unoptimized={shouldUnoptimizeImages()}
                                   />
                                 </div>
                               )}

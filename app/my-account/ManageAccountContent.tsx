@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import { shouldUnoptimizeImages } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
@@ -187,6 +188,7 @@ export default function ManageAccountContent({ user, clerkUser }: ManageAccountC
                 fill
                 className="object-cover"
                 sizes="96px"
+                unoptimized={shouldUnoptimizeImages()}
               />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <button
@@ -200,6 +202,7 @@ export default function ManageAccountContent({ user, clerkUser }: ManageAccountC
                     width={16}
                     height={16}
                     className="object-contain"
+                    unoptimized={shouldUnoptimizeImages()}
                   />
                   <span className="font-medium text-foreground">
                     {isUploadingImage ? "Uploading..." : "Upload"}

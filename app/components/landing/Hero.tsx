@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { shouldUnoptimizeImages } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@clerk/nextjs";
 
@@ -143,6 +144,7 @@ export default function Hero() {
                 height={600}
                 className="w-full h-auto object-cover"
                 priority
+                unoptimized={shouldUnoptimizeImages()}
               />
             </div>
             {/* Decorative elements */}

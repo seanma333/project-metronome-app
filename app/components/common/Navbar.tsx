@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { shouldUnoptimizeImages } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
@@ -31,6 +32,7 @@ export default function Navbar() {
               width={40}
               height={40}
               className="h-10 w-auto"
+              unoptimized={shouldUnoptimizeImages()}
             />
             <span className="text-xl font-bold text-primary">TempoLink</span>
           </Link>

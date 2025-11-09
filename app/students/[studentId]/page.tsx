@@ -4,6 +4,7 @@ import { getStudentById } from "@/app/actions/get-student-profile";
 import Navbar from "@/app/components/common/Navbar";
 import Footer from "@/app/components/common/Footer";
 import Image from "next/image";
+import { shouldUnoptimizeImages } from "@/lib/utils";
 
 interface StudentViewPageProps {
   params: Promise<{ studentId: string }>;
@@ -49,6 +50,7 @@ export default async function StudentViewPage({ params }: StudentViewPageProps) 
                     fill
                     className="object-cover"
                     sizes="192px"
+                    unoptimized={shouldUnoptimizeImages()}
                   />
                 </div>
               </div>

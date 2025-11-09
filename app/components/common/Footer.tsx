@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { shouldUnoptimizeImages } from "@/lib/utils";
 import { Facebook, Twitter, Instagram, Youtube, Mail } from "lucide-react";
 
 export default function Footer() {
@@ -16,6 +17,7 @@ export default function Footer() {
                 width={40}
                 height={40}
                 className="h-10 w-auto"
+                unoptimized={shouldUnoptimizeImages()}
               />
               <span className="text-xl font-bold text-primary">TempoLink</span>
             </Link>
