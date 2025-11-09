@@ -11,9 +11,12 @@ import {
   instruments,
   lessons,
   studentInstrumentProficiency,
+  calendarEvents,
+  calendarEventAttendees,
 } from "@/lib/db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import { RRule } from "rrule";
 
 export async function getStudentBookingRequests() {
   try {
@@ -327,6 +330,128 @@ export async function declineBookingRequest(bookingRequestId: string) {
   }
 }
 
+// Helper function to convert day of week (0=Sunday, 6=Saturday) to RRule weekday constant
+function dayOfWeekToRRuleWeekday(dayOfWeek: number): any {
+  const weekdays = [RRule.SU, RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA];
+  return weekdays[dayOfWeek];
+}
+
+// Helper function to generate RRULE string for weekly recurrence using RRule library
+function generateWeeklyRRULE(dayOfWeek: number, dtStart: Date): string {
+  // Create RRule instance for weekly recurrence on the specified day
+  const rrule = new RRule({
+    freq: RRule.WEEKLY,
+    byweekday: [dayOfWeekToRRuleWeekday(dayOfWeek)],
+    dtstart: dtStart,
+  });
+  
+  // Return the string representation of the RRULE
+  // Note: toString() returns the RRULE string without DTSTART (as per iCalendar spec)
+  return rrule.toString();
+}
+
+// Helper function to calculate the next occurrence of a day of week in a specific timezone
+function getNextDayOfWeek(dayOfWeek: number, startTime: string, timezone?: string): Date {
+  const now = new Date();
+  const currentDay = now.getDay(); // 0 = Sunday, 6 = Saturday
+  const daysUntilNext = (dayOfWeek - currentDay + 7) % 7;
+  
+  // Parse the time
+  const [hours, minutes, seconds] = startTime.split(":").map(Number);
+  
+  // If today is the target day, check if the time has passed
+  let daysToAdd = daysUntilNext;
+  if (daysUntilNext === 0) {
+    // Create a date for today at the specified time in the given timezone
+    const todayAtTime = getDateInTimezone(now, hours, minutes, seconds || 0, timezone);
+    if (todayAtTime <= now) {
+      daysToAdd = 7; // Move to next week
+    }
+  }
+  
+  // Calculate the next occurrence date
+  const nextDate = new Date(now);
+  nextDate.setDate(now.getDate() + daysToAdd);
+  
+  // Set the time in the specified timezone
+  return getDateInTimezone(nextDate, hours, minutes, seconds || 0, timezone);
+}
+
+// Helper function to create a Date object with specific time in a given timezone
+function getDateInTimezone(baseDate: Date, hours: number, minutes: number, seconds: number, timezone?: string): Date {
+  if (!timezone) {
+    // If no timezone specified, use local time
+    const date = new Date(baseDate);
+    date.setHours(hours, minutes, seconds, 0);
+    return date;
+  }
+  
+  // Create an ISO string for the date in the specified timezone
+  const year = baseDate.getFullYear();
+  const month = String(baseDate.getMonth() + 1).padStart(2, '0');
+  const day = String(baseDate.getDate()).padStart(2, '0');
+  const hourStr = String(hours).padStart(2, '0');
+  const minStr = String(minutes).padStart(2, '0');
+  const secStr = String(seconds).padStart(2, '0');
+  
+  // Create a date string that represents this time in the target timezone
+  // We'll use Intl.DateTimeFormat to convert it properly
+  const dateStr = `${year}-${month}-${day}T${hourStr}:${minStr}:${secStr}`;
+  
+  // Get the time in the target timezone as if it were UTC, then adjust
+  // This is a workaround since JavaScript Date doesn't directly support timezone-aware construction
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  
+  // Create a date object and find the UTC time that represents the desired local time in the timezone
+  // We'll create a date and then adjust it
+  const tempDate = new Date(`${dateStr}Z`); // Treat as UTC first
+  
+  // Get what this UTC time represents in the target timezone
+  const parts = formatter.formatToParts(tempDate);
+  const tzYear = parseInt(parts.find(p => p.type === 'year')?.value || '0');
+  const tzMonth = parseInt(parts.find(p => p.type === 'month')?.value || '0');
+  const tzDay = parseInt(parts.find(p => p.type === 'day')?.value || '0');
+  const tzHour = parseInt(parts.find(p => p.type === 'hour')?.value || '0');
+  const tzMin = parseInt(parts.find(p => p.type === 'minute')?.value || '0');
+  
+  // Calculate the difference
+  const targetTotalMinutes = hours * 60 + minutes;
+  const tzTotalMinutes = tzHour * 60 + tzMin;
+  const diffMinutes = targetTotalMinutes - tzTotalMinutes;
+  
+  // Adjust the date
+  const adjustedDate = new Date(tempDate.getTime() + diffMinutes * 60 * 1000);
+  
+  return adjustedDate;
+}
+
+// Helper function to calculate end date from start date and duration
+function getEndDate(startDate: Date, startTime: string, endTime: string): Date {
+  const endDate = new Date(startDate);
+  const [startHours, startMinutes] = startTime.split(":").map(Number);
+  const [endHours, endMinutes] = endTime.split(":").map(Number);
+  
+  // Calculate duration in minutes
+  const startMinutesTotal = startHours * 60 + startMinutes;
+  const endMinutesTotal = endHours * 60 + endMinutes;
+  const durationMinutes = endMinutesTotal - startMinutesTotal;
+  
+  // Add duration to start date
+  endDate.setMinutes(endDate.getMinutes() + durationMinutes);
+  
+  return endDate;
+}
+
+
 export async function acceptBookingRequest(bookingRequestId: string) {
   try {
     const clerkUser = await currentUser();
@@ -351,14 +476,18 @@ export async function acceptBookingRequest(bookingRequestId: string) {
       return { error: "Only teachers can accept booking requests" };
     }
 
-    // Get the booking request with all necessary data
+    // Get the booking request with all necessary data including student and instrument
     const bookingRequestData = await db
       .select({
         bookingRequest: bookingRequests,
         timeslot: teacherTimeslots,
+        student: students,
+        instrument: instruments,
       })
       .from(bookingRequests)
       .innerJoin(teacherTimeslots, eq(bookingRequests.timeslotId, teacherTimeslots.id))
+      .innerJoin(students, eq(bookingRequests.studentId, students.id))
+      .innerJoin(instruments, eq(bookingRequests.instrumentId, instruments.id))
       .where(eq(bookingRequests.id, bookingRequestId))
       .limit(1);
 
@@ -368,6 +497,8 @@ export async function acceptBookingRequest(bookingRequestId: string) {
 
     const bookingRequest = bookingRequestData[0].bookingRequest;
     const timeslot = bookingRequestData[0].timeslot;
+    const student = bookingRequestData[0].student;
+    const instrument = bookingRequestData[0].instrument;
 
     // Verify the teacher owns this timeslot
     if (timeslot.teacherId !== userData.id) {
@@ -387,7 +518,7 @@ export async function acceptBookingRequest(bookingRequestId: string) {
     const now = new Date();
     const lessonId = randomUUID();
 
-    // Perform all operations: update booking request, create lesson, update timeslot
+    // Perform all operations: update booking request, create lesson, update timeslot, create calendar event
     // Update booking request status to ACCEPTED
     await db
       .update(bookingRequests)
@@ -419,7 +550,91 @@ export async function acceptBookingRequest(bookingRequestId: string) {
       })
       .where(eq(teacherTimeslots.id, bookingRequest.timeslotId));
 
-    return { success: true, lessonId };
+    // Create calendar event
+    const eventId = randomUUID();
+    const eventUid = `${lessonId}@tempo-link.xyz`;
+    
+    // Get teacher's timezone or use UTC
+    const timezone = userData.preferredTimezone || "UTC";
+    
+    // Calculate next occurrence of the day of week in the teacher's timezone
+    const dtStart = getNextDayOfWeek(timeslot.dayOfWeek, timeslot.startTime, timezone);
+    const dtEnd = getEndDate(dtStart, timeslot.startTime, timeslot.endTime);
+    
+    // Generate RRULE for weekly recurrence using RRule library
+    // Pass dtStart so the rule is created with the correct start date context
+    const rrule = generateWeeklyRRULE(timeslot.dayOfWeek, dtStart);
+    
+    // Create event summary
+    const studentName = `${student.firstName || ""} ${student.lastName || ""}`.trim() || "Student";
+    const summary = `${instrument.name} Lesson - ${studentName}`;
+    
+    // Create event description
+    const description = `Weekly ${instrument.name} lesson with ${studentName}. Format: ${bookingRequest.lessonFormat === "IN_PERSON" ? "In Person" : "Online"}.`;
+    
+    // Create calendar event
+    await db.insert(calendarEvents).values({
+      id: eventId,
+      uid: eventUid,
+      summary,
+      description,
+      location: bookingRequest.lessonFormat === "IN_PERSON" ? null : "Online",
+      dtStart,
+      dtEnd,
+      allDay: false,
+      timezone,
+      rrule,
+      exdates: null,
+      status: "CONFIRMED",
+      eventType: "LESSON",
+      priority: 5, // Medium priority
+      organizerId: userData.id,
+      lessonId,
+      timeslotId: bookingRequest.timeslotId,
+      sequence: 0,
+      lastModified: now,
+      created: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create calendar event attendees (teacher and student)
+    // Get student's user ID if they have one
+    let studentUserId: string | null = null;
+    if (student.userId) {
+      studentUserId = student.userId;
+    } else if (student.parentId) {
+      // If student is a child, use parent's user ID
+      studentUserId = student.parentId;
+    }
+
+    // Add teacher as attendee (organizer)
+    await db.insert(calendarEventAttendees).values({
+      id: randomUUID(),
+      eventId,
+      userId: userData.id,
+      participationStatus: "ACCEPTED",
+      role: "ORGANIZER",
+      responseRequested: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Add student/parent as attendee
+    if (studentUserId) {
+      await db.insert(calendarEventAttendees).values({
+        id: randomUUID(),
+        eventId,
+        userId: studentUserId,
+        participationStatus: "NEEDS-ACTION",
+        role: "REQ-PARTICIPANT",
+        responseRequested: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return { success: true, lessonId, eventId };
   } catch (error) {
     console.error("Error accepting booking request:", error);
     return { error: "Failed to accept booking request" };

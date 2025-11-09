@@ -120,3 +120,75 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* React Big Calendar Custom Styles */
+.calendar-container .rbc-calendar {
+  @apply bg-card text-foreground;
+}
+
+.calendar-container .rbc-header {
+  @apply border-border bg-muted text-foreground;
+  padding: 0.75rem;
+  font-weight: 600;
+}
+
+.calendar-container .rbc-day-bg {
+  @apply border-border;
+}
+
+.calendar-container .rbc-today {
+  @apply bg-accent/20;
+}
+
+.calendar-container .rbc-off-range-bg {
+  @apply bg-muted/30;
+}
+
+.calendar-container .rbc-toolbar {
+  @apply mb-4;
+}
+
+.calendar-container .rbc-toolbar button {
+  @apply bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  margin: 0 0.25rem;
+}
+
+.calendar-container .rbc-toolbar button:active,
+.calendar-container .rbc-toolbar button.rbc-active {
+  @apply bg-primary text-primary-foreground;
+}
+
+.calendar-container .rbc-event {
+  @apply border-0 rounded;
+  padding: 2px 4px;
+}
+
+.calendar-container .rbc-event-content {
+  @apply text-white;
+}
+
+.calendar-container .rbc-time-slot {
+  @apply border-border;
+}
+
+.calendar-container .rbc-time-header-content {
+  @apply border-border;
+}
+
+.calendar-container .rbc-time-content {
+  @apply border-border;
+}
+
+.calendar-container .rbc-agenda-view table {
+  @apply border-border;
+}
+
+.calendar-container .rbc-agenda-view tbody > tr > td {
+  @apply border-border;
+}
+
+.calendar-container .rbc-agenda-view tbody > tr > td + td {
+  @apply border-l border-border;
+}

@@ -14,7 +14,7 @@ import { useUser } from "@clerk/nextjs";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const role = (user?.publicMetadata?.role as string | undefined) || undefined;
   const canFindTeacher = role === "STUDENT" || role === "PARENT";
   const isTeacher = role === "TEACHER";

@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/app/components/ui/alert-dialog";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Calendar } from "lucide-react";
 import { createLessonNote, updateLessonNote, getLessonNote, deleteLessonNote } from "@/app/actions/manage-lesson-notes";
+import { checkLessonCalendarEvent } from "@/app/actions/check-lesson-calendar-event";
+import { createLessonCalendarEvent } from "@/app/actions/create-lesson-calendar-event";
 import NoteDialog from "../NoteDialog";
 
 const DAYS_OF_WEEK = [
@@ -61,8 +63,34 @@ export default function LessonDetailsContent({ lesson, user }: LessonDetailsCont
   const [selectedNote, setSelectedNote] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [deletingNotes, setDeletingNotes] = useState<Set<string>>(new Set());
+  const [hasCalendarEvent, setHasCalendarEvent] = useState<boolean | null>(null);
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+  const [checkingEvent, setCheckingEvent] = useState(true);
 
   const isTeacher = user.role === "TEACHER" && lesson.teacher.id === user.id;
+
+  // Check if calendar event exists for this lesson
+  useEffect(() => {
+    const checkEvent = async () => {
+      try {
+        setCheckingEvent(true);
+        const result = await checkLessonCalendarEvent(lesson.lesson.id);
+        if (result.error) {
+          console.error("Error checking calendar event:", result.error);
+          setHasCalendarEvent(null);
+        } else {
+          setHasCalendarEvent(result.exists || false);
+        }
+      } catch (error) {
+        console.error("Error checking calendar event:", error);
+        setHasCalendarEvent(null);
+      } finally {
+        setCheckingEvent(false);
+      }
+    };
+
+    checkEvent();
+  }, [lesson.lesson.id]);
   const dayName = DAYS_OF_WEEK[lesson.timeslot.dayOfWeek];
   const startTime = formatTime(lesson.timeslot.startTime);
   const endTime = formatTime(lesson.timeslot.endTime);
@@ -133,6 +161,28 @@ export default function LessonDetailsContent({ lesson, user }: LessonDetailsCont
     }
   };
 
+  const handleCreateCalendarEvent = async () => {
+    if (isCreatingEvent) return;
+
+    setIsCreatingEvent(true);
+    try {
+      const result = await createLessonCalendarEvent(lesson.lesson.id);
+
+      if (result.error) {
+        alert(result.error);
+      } else {
+        // Update state to reflect that event now exists
+        setHasCalendarEvent(true);
+        alert("Calendar event created successfully!");
+      }
+    } catch (error) {
+      console.error("Error creating calendar event:", error);
+      alert("Failed to create calendar event. Please try again.");
+    } finally {
+      setIsCreatingEvent(false);
+    }
+  };
+
   // Create a lesson object for the NoteDialog
   const lessonForDialog = {
     lesson: {
@@ -178,18 +228,48 @@ export default function LessonDetailsContent({ lesson, user }: LessonDetailsCont
             </div>
           </CardHeader>
           <CardContent>
-            <div className="bg-muted/50 rounded-lg p-4">
-              <p className="text-sm font-medium mb-1">Next Lesson</p>
-              <p className="text-foreground text-lg">
-                {nextLessonDate.toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })}
-              </p>
+            <div className="space-y-4">
+              <div className="bg-muted/50 rounded-lg p-4">
+                <p className="text-sm font-medium mb-1">Next Lesson</p>
+                <p className="text-foreground text-lg">
+                  {nextLessonDate.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}
+                </p>
+              </div>
+              
+              {/* Calendar Event Section */}
+              {isTeacher && (
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <div>
+                    <p className="text-sm font-medium">Calendar Event</p>
+                    <p className="text-xs text-muted-foreground">
+                      {checkingEvent
+                        ? "Checking..."
+                        : hasCalendarEvent
+                        ? "Event added to calendar"
+                        : "No calendar event yet"}
+                    </p>
+                  </div>
+                  {!checkingEvent && !hasCalendarEvent && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCreateCalendarEvent}
+                      disabled={isCreatingEvent}
+                      className="flex items-center gap-2"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      {isCreatingEvent ? "Creating..." : "Add to Calendar"}
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
