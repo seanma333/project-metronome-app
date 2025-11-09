@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Rnd } from "react-rnd";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
+import { cn, shouldUnoptimizeImages } from "@/lib/utils";
 import { updateTeacherTimeslot } from "@/app/actions/update-teacher-timeslot";
 import { deleteTeacherTimeslot } from "@/app/actions/delete-teacher-timeslot";
 import { createTeacherTimeslot } from "@/app/actions/create-teacher-timeslot";
@@ -946,6 +946,7 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
                       width={48}
                       height={48}
                       className="rounded-full object-cover"
+                      unoptimized={shouldUnoptimizeImages()}
                     />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
