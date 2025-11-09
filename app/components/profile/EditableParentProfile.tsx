@@ -15,7 +15,7 @@ import {
   updateParentStudent,
   removeParentStudent,
 } from "@/app/actions/manage-parent-students";
-import { updateParentImageUrl } from "@/app/actions/update-parent-image";
+import { updateParentImageUrl, uploadParentProfileImage } from "@/app/actions/update-parent-image";
 import { getInstruments } from "@/app/actions/get-instruments-languages";
 import {
   getStudentInstrumentProficiencies,
@@ -23,7 +23,6 @@ import {
   removeStudentInstrumentProficiency,
 } from "@/app/actions/manage-instrument-proficiency";
 import ProficiencyBadge from "./ProficiencyBadge";
-import { shouldUnoptimizeImages } from "@/lib/utils";
 
 type ProficiencyLevel = "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
 
@@ -154,15 +153,15 @@ export default function EditableParentProfile({
 
     // Validate file size - minimum 1KB (to prevent empty/corrupted files)
     const minSize = 1024; // 1KB
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 4 * 1024 * 1024; // 4MB
     if (file.size < minSize) {
       alert("Image file is too small. Please select a valid image file.");
       return;
     }
 
-    // Validate file size - maximum 5MB
+    // Validate file size - maximum 4MB
     if (file.size > maxSize) {
-      alert("Image size must be less than 5MB. Please compress the image or choose a smaller file.");
+      alert("Image size must be less than 4MB. Please compress the image or choose a smaller file.");
       return;
     }
 
@@ -182,22 +181,12 @@ export default function EditableParentProfile({
     setIsUploadingImage(true);
 
     try {
-      // Upload image to Clerk using setProfileImage
-      await clerkUser.setProfileImage({ file });
-
-      // Get the updated image URL from Clerk
-      await clerkUser.reload();
-      const imageUrl = clerkUser.imageUrl;
-
-      if (!imageUrl) {
-        throw new Error("Failed to get image URL from Clerk");
-      }
-
-      // Update database with new image URL
-      const result = await updateParentImageUrl(imageUrl);
+      // Upload image to Vercel Blob using our new function
+      const result = await uploadParentProfileImage(file);
+      
       if (result.error) {
-        console.error("Error saving image URL:", result.error);
-        alert("Failed to save image");
+        console.error("Error uploading image:", result.error);
+        alert(result.error);
       } else {
         router.refresh();
       }
@@ -379,7 +368,6 @@ export default function EditableParentProfile({
                 fill
                 className="object-cover"
                 sizes="192px"
-                unoptimized={shouldUnoptimizeImages()}
               />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <button
@@ -393,7 +381,6 @@ export default function EditableParentProfile({
                     width={20}
                     height={20}
                     className="object-contain"
-                    unoptimized={shouldUnoptimizeImages()}
                   />
                   <span className="text-sm font-medium text-foreground">
                     {isUploadingImage ? "Uploading..." : "Upload"}
@@ -456,7 +443,6 @@ export default function EditableParentProfile({
                         width={20}
                         height={20}
                         className="object-contain"
-                        unoptimized={shouldUnoptimizeImages()}
                       />
                     </button>
                   </div>
@@ -483,7 +469,6 @@ export default function EditableParentProfile({
               width={20}
               height={20}
               className="object-contain"
-              unoptimized={shouldUnoptimizeImages()}
             />
             <span>Add Student</span>
           </button>
@@ -560,7 +545,6 @@ export default function EditableParentProfile({
                         width={20}
                         height={20}
                         className="object-contain"
-                        unoptimized={shouldUnoptimizeImages()}
                       />
                     </button>
                     <AlertDialog>
@@ -575,7 +559,6 @@ export default function EditableParentProfile({
                             width={20}
                             height={20}
                             className="object-contain"
-                            unoptimized={shouldUnoptimizeImages()}
                           />
                         </button>
                       </AlertDialogTrigger>
@@ -664,7 +647,6 @@ export default function EditableParentProfile({
                                       width={16}
                                       height={16}
                                       className="object-contain"
-                                      unoptimized={shouldUnoptimizeImages()}
                                     />
                                   </Button>
                                 </AlertDialogTrigger>

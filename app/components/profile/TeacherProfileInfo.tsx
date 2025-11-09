@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { cn, shouldUnoptimizeImages } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface TeacherProfileInfoProps {
   imageUrl: string | null;
@@ -30,7 +30,6 @@ export default function TeacherProfileInfo({
           fill
           className="object-cover"
           sizes="192px"
-          unoptimized={shouldUnoptimizeImages()}
         />
       </div>
       <div className="text-center space-y-2">

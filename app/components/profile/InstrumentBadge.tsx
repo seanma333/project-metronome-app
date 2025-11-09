@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { cn, shouldUnoptimizeImages } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface InstrumentBadgeProps {
   instrument: {
@@ -37,7 +37,6 @@ export default function InstrumentBadge({
         width={20}
         height={20}
         className="object-contain"
-        unoptimized={shouldUnoptimizeImages()}
       />
       <span>{instrument.name}</span>
     </div>

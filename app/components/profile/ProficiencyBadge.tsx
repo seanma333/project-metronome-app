@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { cn, shouldUnoptimizeImages } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface ProficiencyBadgeProps {
   instrument: {
@@ -44,7 +44,6 @@ export default function ProficiencyBadge({
         width={20}
         height={20}
         className="object-contain"
-        unoptimized={shouldUnoptimizeImages()}
       />
       <span>
         {instrument.name} - {getProficiencyDisplay(proficiency)}

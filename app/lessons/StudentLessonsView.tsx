@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { shouldUnoptimizeImages } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 
 const DAYS_OF_WEEK = [
@@ -93,7 +92,6 @@ export default function StudentLessonsView({ lessons }: StudentLessonsViewProps)
                       width={64}
                       height={64}
                       className="w-full h-full object-cover"
-                      unoptimized={shouldUnoptimizeImages()}
                     />
                   </div>
                 )}

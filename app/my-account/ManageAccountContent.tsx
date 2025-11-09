@@ -2,14 +2,13 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { shouldUnoptimizeImages } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/app/components/ui/alert-dialog";
-import { updateAccountName, updateAccountImage, deleteAccount } from "@/app/actions/manage-account";
+import { updateAccountName, updateAccountImage, deleteAccount, uploadProfileImage } from "@/app/actions/manage-account";
 
 interface ManageAccountContentProps {
   user: {
@@ -97,40 +96,25 @@ export default function ManageAccountContent({ user, clerkUser }: ManageAccountC
 
     // Validate file size
     const minSize = 1024; // 1KB
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 4 * 1024 * 1024; // 4MB (updated from 5MB)
     if (file.size < minSize) {
       alert("Image file is too small. Please select a valid image file.");
       return;
     }
     if (file.size > maxSize) {
-      alert("Image size must be less than 5MB. Please compress the image or choose a smaller file.");
-      return;
-    }
-
-    if (!currentClerkUser) {
-      alert("User not loaded");
+      alert("Image size must be less than 4MB. Please compress the image or choose a smaller file.");
       return;
     }
 
     setIsUploadingImage(true);
 
     try {
-      // Upload image to Clerk using setProfileImage
-      await currentClerkUser.setProfileImage({ file });
-
-      // Get the updated image URL from Clerk
-      await currentClerkUser.reload();
-      const imageUrl = currentClerkUser.imageUrl;
-
-      if (!imageUrl) {
-        throw new Error("Failed to get image URL from Clerk");
-      }
-
-      // Update database with new image URL
-      const result = await updateAccountImage(imageUrl);
+      // Upload image to Vercel Blob using our new function
+      const result = await uploadProfileImage(file);
+      
       if (result.error) {
-        console.error("Error saving image URL:", result.error);
-        alert("Failed to save image");
+        console.error("Error uploading image:", result.error);
+        alert(result.error);
       } else {
         router.refresh();
       }
@@ -188,7 +172,6 @@ export default function ManageAccountContent({ user, clerkUser }: ManageAccountC
                 fill
                 className="object-cover"
                 sizes="96px"
-                unoptimized={shouldUnoptimizeImages()}
               />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <button
@@ -202,7 +185,6 @@ export default function ManageAccountContent({ user, clerkUser }: ManageAccountC
                     width={16}
                     height={16}
                     className="object-contain"
-                    unoptimized={shouldUnoptimizeImages()}
                   />
                   <span className="font-medium text-foreground">
                     {isUploadingImage ? "Uploading..." : "Upload"}

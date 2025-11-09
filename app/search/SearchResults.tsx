@@ -7,7 +7,6 @@ import { Button } from "@/app/components/ui/button";
 import InstrumentBadge from "@/app/components/profile/InstrumentBadge";
 import LanguageBadge from "@/app/components/profile/LanguageBadge";
 import { getTimezoneDisplayName } from "@/lib/timezone-utils";
-import { shouldUnoptimizeImages } from "@/lib/utils";
 
 export interface SearchResult {
   teacherId: string;
@@ -91,7 +90,6 @@ export function SearchResults({
                         fill
                         className="object-cover"
                         sizes="96px"
-                        unoptimized={shouldUnoptimizeImages()}
                       />
                     </div>
                   </Link>
