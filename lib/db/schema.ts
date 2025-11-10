@@ -194,6 +194,7 @@ export const lessonNotes = pgTable("lesson_notes", {
     .references(() => lessons.id, { onDelete: "cascade" }),
   noteTitle: varchar("note_title", { length: 255 }), // Title for the note (optional, for organization)
   notes: text("notes").notNull(), // Large text field for detailed notes
+  lessonDate: timestamp("lesson_date"), // The specific date/time of the lesson this note is for
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
@@ -202,6 +203,8 @@ export const lessonNotes = pgTable("lesson_notes", {
     lessonIdIdx: index("lesson_notes_lesson_id_idx").on(table.lessonId),
     // Index for date-based queries (to get notes by creation date)
     createdAtIdx: index("lesson_notes_created_at_idx").on(table.createdAt),
+    // Index for lesson date queries
+    lessonDateIdx: index("lesson_notes_lesson_date_idx").on(table.lessonDate),
   };
 });
 

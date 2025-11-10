@@ -10,6 +10,9 @@ import { ArrowLeft, Calendar } from "lucide-react";
 import { createLessonNote, updateLessonNote, getLessonNote, deleteLessonNote } from "@/app/actions/manage-lesson-notes";
 import { checkLessonCalendarEvent } from "@/app/actions/check-lesson-calendar-event";
 import { createLessonCalendarEvent } from "@/app/actions/create-lesson-calendar-event";
+import { deleteLesson } from "@/app/actions/delete-lesson";
+import { RRule } from "rrule";
+import { useRouter } from "next/navigation";
 import NoteDialog from "../NoteDialog";
 
 const DAYS_OF_WEEK = [
@@ -23,53 +26,28 @@ const formatTime = (timeString: string) => {
   return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
 };
 
-// Calculate next lesson date based on day of week and time
-const getNextLessonDate = (dayOfWeek: number, startTime: string) => {
-  const now = new Date();
-  const currentDay = now.getDay();
-  const [hours, minutes] = startTime.split(':').map(Number);
-
-  // Calculate days until next occurrence
-  let daysUntil = (dayOfWeek - currentDay + 7) % 7;
-
-  // If it's today but the time has passed, move to next week
-  if (daysUntil === 0) {
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    if (currentHour > hours || (currentHour === hours && currentMinute >= minutes)) {
-      daysUntil = 7;
-    }
-  }
-
-  // If daysUntil is 0 and we're checking today, use today
-  if (daysUntil === 0) {
-    return now;
-  }
-
-  const nextDate = new Date(now);
-  nextDate.setDate(now.getDate() + daysUntil);
-  nextDate.setHours(hours, minutes, 0, 0);
-
-  return nextDate;
-};
-
 interface LessonDetailsContentProps {
   lesson: any;
   user: any;
 }
 
 export default function LessonDetailsContent({ lesson, user }: LessonDetailsContentProps) {
+  const router = useRouter();
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [selectedNote, setSelectedNote] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [deletingNotes, setDeletingNotes] = useState<Set<string>>(new Set());
   const [hasCalendarEvent, setHasCalendarEvent] = useState<boolean | null>(null);
+  const [calendarEvent, setCalendarEvent] = useState<any>(null);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [checkingEvent, setCheckingEvent] = useState(true);
+  const [nextLessonDate, setNextLessonDate] = useState<Date | null>(null);
+  const [isDeletingLesson, setIsDeletingLesson] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const isTeacher = user.role === "TEACHER" && lesson.teacher.id === user.id;
 
-  // Check if calendar event exists for this lesson
+  // Check if calendar event exists for this lesson and calculate next lesson date
   useEffect(() => {
     const checkEvent = async () => {
       try {
@@ -78,24 +56,69 @@ export default function LessonDetailsContent({ lesson, user }: LessonDetailsCont
         if (result.error) {
           console.error("Error checking calendar event:", result.error);
           setHasCalendarEvent(null);
+          setCalendarEvent(null);
+          setNextLessonDate(null);
+        } else if (result.exists && result.event) {
+          setHasCalendarEvent(true);
+          setCalendarEvent(result.event);
+          
+          // Calculate next lesson date from calendar event
+          const eventDtStart = new Date(result.event.dtStart);
+          const now = new Date();
+          
+          if (result.event.rrule) {
+            // Parse RRULE and find next occurrence
+            try {
+              const parsedRule = RRule.fromString(result.event.rrule);
+              const rruleOptions = {
+                ...parsedRule.options,
+                dtstart: eventDtStart,
+              };
+              const rrule = new RRule(rruleOptions);
+              
+              // Get next occurrence after now
+              const oneYearFromNow = new Date(now);
+              oneYearFromNow.setFullYear(now.getFullYear() + 1);
+              const occurrences = rrule.between(now, oneYearFromNow, true);
+              
+              if (occurrences.length > 0) {
+                setNextLessonDate(occurrences[0]);
+              } else {
+                // No future occurrences, use the dtStart if it's in the future
+                setNextLessonDate(eventDtStart > now ? eventDtStart : null);
+              }
+            } catch (error) {
+              console.error("Error parsing RRULE:", error);
+              // Fallback to dtStart if it's in the future
+              setNextLessonDate(eventDtStart > now ? eventDtStart : null);
+            }
+          } else {
+            // Non-recurring event, use dtStart if it's in the future
+            setNextLessonDate(eventDtStart > now ? eventDtStart : null);
+          }
         } else {
-          setHasCalendarEvent(result.exists || false);
+          setHasCalendarEvent(false);
+          setCalendarEvent(null);
+          // No calendar event, show fallback message
+          setNextLessonDate(null);
         }
       } catch (error) {
         console.error("Error checking calendar event:", error);
         setHasCalendarEvent(null);
+        setCalendarEvent(null);
+        setNextLessonDate(null);
       } finally {
         setCheckingEvent(false);
       }
     };
 
     checkEvent();
-  }, [lesson.lesson.id]);
+  }, [lesson.lesson.id, lesson.timeslot.dayOfWeek, lesson.timeslot.startTime]);
+
   const dayName = DAYS_OF_WEEK[lesson.timeslot.dayOfWeek];
   const startTime = formatTime(lesson.timeslot.startTime);
   const endTime = formatTime(lesson.timeslot.endTime);
   const instrumentName = lesson.instrument.name;
-  const nextLessonDate = getNextLessonDate(lesson.timeslot.dayOfWeek, lesson.timeslot.startTime);
 
   // Display name based on role
   let displayName = "";
@@ -171,15 +194,35 @@ export default function LessonDetailsContent({ lesson, user }: LessonDetailsCont
       if (result.error) {
         alert(result.error);
       } else {
-        // Update state to reflect that event now exists
-        setHasCalendarEvent(true);
-        alert("Calendar event created successfully!");
+        // Refresh the page to reload calendar event data
+        window.location.reload();
       }
     } catch (error) {
       console.error("Error creating calendar event:", error);
       alert("Failed to create calendar event. Please try again.");
     } finally {
       setIsCreatingEvent(false);
+    }
+  };
+
+  const handleDeleteLesson = async () => {
+    if (isDeletingLesson) return;
+
+    setIsDeletingLesson(true);
+    try {
+      const result = await deleteLesson(lesson.lesson.id);
+
+      if (result.error) {
+        alert(result.error);
+        setIsDeletingLesson(false);
+      } else {
+        // Redirect to lessons page after successful deletion
+        router.push("/lessons");
+      }
+    } catch (error) {
+      console.error("Error deleting lesson:", error);
+      alert("Failed to delete lesson. Please try again.");
+      setIsDeletingLesson(false);
     }
   };
 
@@ -204,7 +247,7 @@ export default function LessonDetailsContent({ lesson, user }: LessonDetailsCont
 
         {/* Lesson Header */}
         <Card>
-          <CardHeader>
+          <CardHeader className="relative">
             <div className="flex items-start gap-4">
               {displayImage && (
                 <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex-shrink-0">
@@ -226,22 +269,87 @@ export default function LessonDetailsContent({ lesson, user }: LessonDetailsCont
                 </p>
               </div>
             </div>
+            {/* Delete Lesson Button - Only for teachers */}
+            {isTeacher && (
+              <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-4 right-4 h-8 w-8 text-muted-foreground hover:text-destructive"
+                    disabled={isDeletingLesson}
+                  >
+                    <Image
+                      src="/svg/delete_button.svg"
+                      alt="Delete lesson"
+                      width={16}
+                      height={16}
+                      className="w-4 h-4"
+                    />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Lesson</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete this lesson? This action will:
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <div className="text-sm text-muted-foreground">
+                    <ul className="list-disc list-inside mt-2 space-y-1">
+                      <li>Delete the lesson permanently</li>
+                      <li>Delete all notes associated with this lesson</li>
+                      <li>Delete all calendar events related to this lesson</li>
+                      <li>Free the associated time slot (make it available for booking)</li>
+                    </ul>
+                    <p className="mt-2 font-medium">This action cannot be undone.</p>
+                  </div>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isDeletingLesson}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteLesson}
+                      disabled={isDeletingLesson}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {isDeletingLesson ? "Deleting..." : "Delete Lesson"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="bg-muted/50 rounded-lg p-4">
-                <p className="text-sm font-medium mb-1">Next Lesson</p>
-                <p className="text-foreground text-lg">
-                  {nextLessonDate.toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
-                </p>
-              </div>
+              {checkingEvent ? (
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-sm font-medium mb-1">Next Lesson</p>
+                  <p className="text-muted-foreground">Loading...</p>
+                </div>
+              ) : hasCalendarEvent && nextLessonDate ? (
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-sm font-medium mb-1">Next Lesson</p>
+                  <p className="text-foreground text-lg">
+                    {nextLessonDate.toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                </div>
+              ) : hasCalendarEvent && !nextLessonDate ? (
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-sm font-medium mb-1">Next Lesson</p>
+                  <p className="text-muted-foreground">No upcoming lessons scheduled</p>
+                </div>
+              ) : (
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-sm font-medium mb-1">Next Lesson</p>
+                  <p className="text-muted-foreground">No calendar event exists for this lesson</p>
+                </div>
+              )}
               
               {/* Calendar Event Section */}
               {isTeacher && (
@@ -394,9 +502,10 @@ export default function LessonDetailsContent({ lesson, user }: LessonDetailsCont
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground whitespace-pre-wrap">
-                      {note.notes}
-                    </p>
+                    <div 
+                      className="text-muted-foreground prose prose-sm max-w-none dark:prose-invert"
+                      dangerouslySetInnerHTML={{ __html: note.notes }}
+                    />
                   </CardContent>
                 </Card>
               ))}

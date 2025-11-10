@@ -27,6 +27,7 @@ interface SearchResultsProps {
   isLoading?: boolean;
   error?: string;
   selectedInstrumentName?: string;
+  selectedStudentId?: string;
 }
 
 export function SearchResults({
@@ -35,6 +36,7 @@ export function SearchResults({
   isLoading,
   error,
   selectedInstrumentName,
+  selectedStudentId,
 }: SearchResultsProps) {
   if (isLoading) {
     return (
@@ -170,7 +172,7 @@ export function SearchResults({
                   {selectedInstrumentName && (
                     <Button asChild className="w-full">
                       <Link
-                        href={`/teachers/${result.teacherId}/request-booking?format=${teachingType}&instrument=${encodeURIComponent(selectedInstrumentName)}`}
+                        href={`/teachers/${result.teacherId}/request-booking?format=${teachingType}&instrument=${encodeURIComponent(selectedInstrumentName)}${selectedStudentId ? `&studentId=${encodeURIComponent(selectedStudentId)}` : ""}`}
                       >
                         Book a Lesson
                       </Link>

@@ -6,7 +6,7 @@ import { users, teachers, lessons, lessonNotes } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
-export async function createLessonNote(lessonId: string, noteTitle: string | null, notes: string) {
+export async function createLessonNote(lessonId: string, noteTitle: string | null, notes: string, lessonDate: Date | null = null) {
   try {
     const clerkUser = await currentUser();
     if (!clerkUser) {
@@ -54,6 +54,7 @@ export async function createLessonNote(lessonId: string, noteTitle: string | nul
       lessonId: lessonId,
       noteTitle: noteTitle || null,
       notes: notes.trim(),
+      lessonDate: lessonDate || null,
       createdAt: now,
       updatedAt: now,
     });
@@ -65,7 +66,7 @@ export async function createLessonNote(lessonId: string, noteTitle: string | nul
   }
 }
 
-export async function updateLessonNote(noteId: string, noteTitle: string | null, notes: string) {
+export async function updateLessonNote(noteId: string, noteTitle: string | null, notes: string, lessonDate: Date | null = null) {
   try {
     const clerkUser = await currentUser();
     if (!clerkUser) {
@@ -109,12 +110,14 @@ export async function updateLessonNote(noteId: string, noteTitle: string | null,
     }
 
     // Update the note
+    const now = new Date();
     await db
       .update(lessonNotes)
       .set({
         noteTitle: noteTitle || null,
         notes: notes.trim(),
-        updatedAt: new Date(),
+        lessonDate: lessonDate || null,
+        updatedAt: now,
       })
       .where(eq(lessonNotes.id, noteId));
 

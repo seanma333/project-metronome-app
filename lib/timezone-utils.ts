@@ -100,11 +100,11 @@ export function getTimezoneDisplayName(timezone: string | null | undefined): str
 /**
  * Get the GMT offset for a timezone
  * @param timezone - IANA timezone identifier (e.g., "America/New_York")
- * @returns GMT offset string (e.g., "GMT-5" or "GMT+9")
+ * @returns GMT offset string (e.g., "GMT-5:00" or "GMT+9:00")
  */
 export function getTimezoneOffset(timezone: string | null | undefined): string {
   if (!timezone) {
-    return "GMT+0";
+    return "GMT+0:00";
   }
 
   try {
@@ -150,14 +150,11 @@ export function getTimezoneOffset(timezone: string | null | undefined): string {
     const offsetMinutesRemainder = Math.abs(offsetMinutes) % 60;
     const sign = offsetMinutes >= 0 ? "+" : "-";
 
-    if (offsetMinutesRemainder === 0) {
-      return `GMT${sign}${offsetHours}`;
-    } else {
-      return `GMT${sign}${offsetHours}:${offsetMinutesRemainder.toString().padStart(2, "0")}`;
-    }
+    // Always include ":00" format, even when minutes are 0
+    return `GMT${sign}${offsetHours}:${offsetMinutesRemainder.toString().padStart(2, "0")}`;
   } catch (error) {
     console.error("Error calculating timezone offset:", error);
-    return "GMT+0";
+    return "GMT+0:00";
   }
 }
 

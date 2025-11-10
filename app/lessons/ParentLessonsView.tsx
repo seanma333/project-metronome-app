@@ -191,9 +191,10 @@ export default function ParentLessonsView({ students }: ParentLessonsViewProps) 
                                 {latestNote.noteTitle && (
                                   <p className="font-medium text-sm mb-2">{latestNote.noteTitle}</p>
                                 )}
-                                <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-3">
-                                  {latestNote.notes}
-                                </p>
+                                <div 
+                                  className="text-sm text-muted-foreground line-clamp-3 prose prose-sm max-w-none dark:prose-invert"
+                                  dangerouslySetInnerHTML={{ __html: latestNote.notes }}
+                                />
                                 <p className="text-xs text-muted-foreground mt-2">
                                   {new Date(latestNote.createdAt).toLocaleDateString()}
                                 </p>

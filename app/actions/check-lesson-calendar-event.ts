@@ -32,7 +32,19 @@ export async function checkLessonCalendarEvent(lessonId: string) {
       .limit(1);
 
     if (eventResult.length > 0) {
-      return { exists: true, event: eventResult[0] };
+      const event = eventResult[0];
+      return { 
+        exists: true, 
+        event: {
+          ...event,
+          dtStart: event.dtStart instanceof Date ? event.dtStart.toISOString() : event.dtStart,
+          dtEnd: event.dtEnd instanceof Date ? event.dtEnd.toISOString() : event.dtEnd,
+          lastModified: event.lastModified instanceof Date ? event.lastModified.toISOString() : event.lastModified,
+          created: event.created instanceof Date ? event.created.toISOString() : event.created,
+          createdAt: event.createdAt instanceof Date ? event.createdAt.toISOString() : event.createdAt,
+          updatedAt: event.updatedAt instanceof Date ? event.updatedAt.toISOString() : event.updatedAt,
+        }
+      };
     }
 
     return { exists: false };

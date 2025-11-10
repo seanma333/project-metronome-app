@@ -11,7 +11,7 @@ import RequestBookingContent from "./RequestBookingContent";
 
 interface RequestBookingPageProps {
   params: Promise<{ teacherId: string }>;
-  searchParams: Promise<{ format?: string; instrument?: string }>;
+  searchParams: Promise<{ format?: string; instrument?: string; studentId?: string }>;
 }
 
 export default async function RequestBookingPage({
@@ -19,7 +19,7 @@ export default async function RequestBookingPage({
   searchParams,
 }: RequestBookingPageProps) {
   const { teacherId } = await params;
-  const { format, instrument } = await searchParams;
+  const { format, instrument, studentId } = await searchParams;
 
   // Check authentication and role
   const user = await currentUser();
@@ -78,6 +78,7 @@ export default async function RequestBookingPage({
               userRole={role}
               userTimezone={userTimezone}
               teacherTimezone={teacherTimezone}
+              initialStudentId={studentId}
             />
           </div>
         </div>

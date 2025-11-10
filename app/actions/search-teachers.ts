@@ -233,8 +233,8 @@ export async function searchTeachers(
         // Filter to teachers who accept all ages
         conditions.push(eq(teachers.agePreference, "ALL_AGES" as const));
       } else if (params.studentAge >= 13 && params.studentAge < 18) {
-        // Filter to teachers who accept 13+ or adults only
-        const agePreferences: Array<"13+" | "ADULTS_ONLY"> = ["13+", "ADULTS_ONLY"];
+        // Filter to teachers who accept all ages or 13+ (not adults only, as they only accept 18+)
+        const agePreferences: Array<"ALL_AGES" | "13+"> = ["ALL_AGES", "13+"];
         conditions.push(inArray(teachers.agePreference, agePreferences));
       }
       // If 18 or older, no age filter needed (all teachers accept adults)

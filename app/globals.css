@@ -192,3 +192,68 @@
 .calendar-container .rbc-agenda-view tbody > tr > td + td {
   @apply border-l border-border;
 }
+
+/* React Simple WYSIWYG Editor Styles */
+.rsw-ce ul {
+  list-style: disc;
+  padding-left: 2em;
+}
+
+.rsw-ce ol {
+  list-style: decimal;
+  padding-left: 2em;
+}
+
+.rsw-ce ul ul,
+.rsw-ce ol ol,
+.rsw-ce ul ol,
+.rsw-ce ol ul {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.rsw-ce li {
+  margin: 0.25em 0;
+}
+
+/* Ensure lists display correctly in rendered notes (prose classes) */
+.prose ul,
+.prose ol {
+  list-style: revert !important;
+  padding-left: 2em !important;
+}
+
+.prose ul {
+  list-style-type: disc !important;
+}
+
+.prose ol {
+  list-style-type: decimal !important;
+}
+
+.prose ul ul,
+.prose ol ol,
+.prose ul ol,
+.prose ol ul {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.prose li {
+  margin: 0.25em 0;
+}
+
+/* Also ensure lists display in non-prose containers where notes are shown */
+[class*="text-muted-foreground"] ul,
+[class*="text-muted-foreground"] ol {
+  list-style: revert !important;
+  padding-left: 2em !important;
+}
+
+[class*="text-muted-foreground"] ul {
+  list-style-type: disc !important;
+}
+
+[class*="text-muted-foreground"] ol {
+  list-style-type: decimal !important;
+}

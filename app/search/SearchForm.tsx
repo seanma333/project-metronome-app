@@ -66,9 +66,9 @@ interface SearchFormProps {
   languages: Language[];
   userPreferences: UserPreferences | null;
   defaultAge: number;
-  studentProfile: { dateOfBirth: string | null } | null;
+  studentProfile: { id: string; dateOfBirth: string | null } | null;
   parentStudents: Student[] | null;
-  onSearchResults: (results: SearchResult[], error?: string, teachingType?: "in-person" | "online", selectedInstrumentName?: string) => void;
+  onSearchResults: (results: SearchResult[], error?: string, teachingType?: "in-person" | "online", selectedInstrumentName?: string, selectedStudentId?: string) => void;
   onSearchStart?: () => void;
 }
 
@@ -255,8 +255,12 @@ export function SearchForm({
       if (result.error) {
         onSearchResults([], result.error);
       } else {
+        // Determine which student ID to pass:
+        // - For parents: use selectedStudent if selected
+        // - For students: use studentProfile.id if available
+        const studentIdToPass = selectedStudent || (studentProfile?.id && !parentStudents ? studentProfile.id : undefined);
         // Pass teaching type and selected instrument name along with results
-        onSearchResults(result.results, undefined, teachingType, selectedInstrumentName);
+        onSearchResults(result.results, undefined, teachingType, selectedInstrumentName, studentIdToPass);
       }
 
       // Write query parameters to URL (without navigating away)
@@ -277,10 +281,16 @@ export function SearchForm({
       router.replace(`${pathname}?${qp.toString()}`);
     } catch (error) {
       console.error("Search error:", error);
+      // Determine which student ID to pass:
+      // - For parents: use selectedStudent if selected
+      // - For students: use studentProfile.id if available
+      const studentIdToPass = selectedStudent || (studentProfile?.id && !parentStudents ? studentProfile.id : undefined);
       onSearchResults(
         [],
         error instanceof Error ? error.message : "Failed to search teachers",
-        teachingType
+        teachingType,
+        undefined,
+        studentIdToPass
       );
       // Also update URL even on error so state persists
       const qpErr = new URLSearchParams();

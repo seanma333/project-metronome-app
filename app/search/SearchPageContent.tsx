@@ -41,7 +41,7 @@ interface SearchPageContentProps {
   languages: Language[];
   userPreferences: UserPreferences | null;
   defaultAge: number;
-  studentProfile: { dateOfBirth: string | null } | null;
+  studentProfile: { id: string; dateOfBirth: string | null } | null;
   parentStudents: Student[] | null;
 }
 
@@ -64,11 +64,14 @@ export function SearchPageContent({
     setError(undefined);
   };
 
+  const [selectedStudentId, setSelectedStudentId] = useState<string | undefined>();
+
   const handleSearchResults = (
     newResults: SearchResult[],
     newError?: string,
     newTeachingType?: "in-person" | "online",
-    newSelectedInstrumentName?: string
+    newSelectedInstrumentName?: string,
+    newSelectedStudentId?: string
   ) => {
     setResults(newResults);
     setError(newError);
@@ -80,6 +83,10 @@ export function SearchPageContent({
     // Update selected instrument name if provided
     if (newSelectedInstrumentName !== undefined) {
       setSelectedInstrumentName(newSelectedInstrumentName);
+    }
+    // Update selected student ID if provided
+    if (newSelectedStudentId !== undefined) {
+      setSelectedStudentId(newSelectedStudentId);
     }
   };
 
@@ -109,6 +116,7 @@ export function SearchPageContent({
             isLoading={isLoading}
             error={error}
             selectedInstrumentName={selectedInstrumentName}
+            selectedStudentId={selectedStudentId}
           />
         </div>
       </div>

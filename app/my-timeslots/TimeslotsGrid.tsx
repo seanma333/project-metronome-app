@@ -7,10 +7,16 @@ import { cn } from "@/lib/utils";
 import { updateTeacherTimeslot } from "@/app/actions/update-teacher-timeslot";
 import { deleteTeacherTimeslot } from "@/app/actions/delete-teacher-timeslot";
 import { createTeacherTimeslot } from "@/app/actions/create-teacher-timeslot";
-import { updateTeachingFormat } from "@/app/actions/update-teacher-preferences";
 import { getLessonByTimeslot } from "@/app/actions/get-lesson-by-timeslot";
 import { RadioGroup, RadioGroupItem } from "@/app/components/ui/radio-group";
 import { Label } from "@/app/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -143,8 +149,8 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
   const [loadingLesson, setLoadingLesson] = useState(false);
   const gridContainerRef = useRef<HTMLDivElement>(null);
 
-  // Keep track of teacher's preferred teaching format
-  const [teachingFormat, setTeachingFormat] = useState<"IN_PERSON_ONLY" | "ONLINE_ONLY" | "IN_PERSON_AND_ONLINE">(defaultTeachingFormat);
+  // Keep track of default teaching format for new timeslots (separate from preferred format)
+  const [defaultTimeslotFormat, setDefaultTimeslotFormat] = useState<"IN_PERSON_ONLY" | "ONLINE_ONLY" | "IN_PERSON_AND_ONLINE">(defaultTeachingFormat);
 
   // Generate all time slots in 15-minute increments
   const allTimeSlots = TIME_SLOTS;
@@ -464,10 +470,31 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
   });
 
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="min-w-[900px] bg-background border border-border rounded-lg">
-        {/* Header with day labels */}
-        <div className="grid grid-cols-8 border-b border-border sticky top-0 bg-background z-10">
+    <div className="w-full">
+      {/* Default Teaching Format Selector */}
+      <div className="mb-4 flex items-center gap-3">
+        <Label htmlFor="default-format" className="text-sm font-medium">
+          Default Teaching Format for New Timeslots:
+        </Label>
+        <Select
+          value={defaultTimeslotFormat}
+          onValueChange={(value) => setDefaultTimeslotFormat(value as "IN_PERSON_ONLY" | "ONLINE_ONLY" | "IN_PERSON_AND_ONLINE")}
+        >
+          <SelectTrigger id="default-format" className="w-[250px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ONLINE_ONLY">Online</SelectItem>
+            <SelectItem value="IN_PERSON_ONLY">In-Person</SelectItem>
+            <SelectItem value="IN_PERSON_AND_ONLINE">Online or In-Person</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="w-full overflow-x-auto">
+        <div className="min-w-[900px] bg-background border border-border rounded-lg">
+          {/* Header with day labels */}
+          <div className="grid grid-cols-8 border-b border-border sticky top-0 bg-background z-10">
           <div className="p-3 font-semibold text-sm text-muted-foreground border-r border-border">
             Time
           </div>
@@ -577,7 +604,7 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
                               dayOfWeek: day.value,
                               startTime,
                               endTime,
-                              teachingFormat,
+                              teachingFormat: defaultTimeslotFormat,
                             });
 
                             if (result.error) {
@@ -638,7 +665,7 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
                   className={cn(
                     "absolute rounded px-1.5 py-0.5 text-xs",
                     "flex flex-col justify-center",
-                    "bg-green-500/20 border border-green-500/40 text-green-700 dark:text-green-400"
+                    "bg-orange-500/20 border border-orange-500/40 text-orange-700 dark:text-orange-400"
                   )}
                   style={{
                     left: `${x + 4}px`,
@@ -725,7 +752,7 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
                 className={cn(
                   "rounded px-1.5 py-0.5 text-xs",
                   "flex flex-col justify-center relative",
-                  "bg-primary/20 border border-primary/40 text-primary",
+                  "bg-green-500/20 border border-green-500/40 text-green-700 dark:text-green-400",
                   "cursor-move",
                   savingTimeslotId === timeslot.id && "opacity-75"
                 )}
@@ -816,15 +843,6 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
                     </Label>
                   </div>
                 </RadioGroup>
-                {(teachingFormat === "ONLINE_ONLY" || teachingFormat === "IN_PERSON_ONLY") &&
-                  editTeachingFormat !== teachingFormat &&
-                  (editTeachingFormat === "IN_PERSON_AND_ONLINE" ||
-                   (teachingFormat === "ONLINE_ONLY" && editTeachingFormat === "IN_PERSON_ONLY") ||
-                   (teachingFormat === "IN_PERSON_ONLY" && editTeachingFormat === "ONLINE_ONLY")) && (
-                    <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded text-xs text-yellow-700 dark:text-yellow-400">
-                      This will also change your preferred teaching format to allow for both, which will have you be searchable by students for both online and in-person lessons.
-                    </div>
-                  )}
               </div>
 
               <div className="border-t pt-4">
@@ -864,13 +882,6 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
               onClick={async () => {
                 if (!editingTimeslot || editTeachingFormat === null) return;
 
-                // Check if we need to update teacher's preferred format
-                const needsFormatUpdate = (teachingFormat === "ONLINE_ONLY" || teachingFormat === "IN_PERSON_ONLY") &&
-                  editTeachingFormat !== teachingFormat &&
-                  (editTeachingFormat === "IN_PERSON_AND_ONLINE" ||
-                   (teachingFormat === "ONLINE_ONLY" && editTeachingFormat === "IN_PERSON_ONLY") ||
-                   (teachingFormat === "IN_PERSON_ONLY" && editTeachingFormat === "ONLINE_ONLY"));
-
                 // Update timeslot
                 const result = await updateTeacherTimeslot({
                   timeslotId: editingTimeslot.id,
@@ -891,14 +902,6 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
                         : slot
                     )
                   );
-
-                  // Update teacher's preferred format if needed
-                  if (needsFormatUpdate) {
-                    const formatResult = await updateTeachingFormat("IN_PERSON_AND_ONLINE");
-                    if (!formatResult.error) {
-                      setTeachingFormat("IN_PERSON_AND_ONLINE");
-                    }
-                  }
 
                   setEditDialogOpen(false);
                   setEditingTimeslot(null);
@@ -1014,6 +1017,7 @@ export default function TimeslotsGrid({ timeslots: initialTimeslots, defaultTeac
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

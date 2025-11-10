@@ -93,6 +93,7 @@ interface RequestBookingContentProps {
   userRole: "STUDENT" | "PARENT";
   userTimezone: string | null;
   teacherTimezone: string | null;
+  initialStudentId?: string;
 }
 
 const DAYS_OF_WEEK = [
@@ -259,7 +260,8 @@ export default function RequestBookingContent({
   selectedInstrument,
   userRole,
   userTimezone,
-  teacherTimezone
+  teacherTimezone,
+  initialStudentId
 }: RequestBookingContentProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -268,9 +270,21 @@ export default function RequestBookingContent({
     initialFormat === "IN_PERSON_ONLY" ? "in-person" : "online"
   );
   const [selectedTimeslot, setSelectedTimeslot] = useState<string | null>(null);
-  const [selectedChild, setSelectedChild] = useState<string>(
-    children.length > 0 ? children[0].id : ""
-  );
+  
+  // Initialize selectedChild from URL param if provided, otherwise use first child
+  const getInitialChildId = (): string => {
+    if (initialStudentId) {
+      // Check if the student ID from URL exists in children
+      const foundChild = children.find((child) => child.id === initialStudentId);
+      if (foundChild) {
+        return foundChild.id;
+      }
+    }
+    // Fallback to first child if available
+    return children.length > 0 ? children[0].id : "";
+  };
+  
+  const [selectedChild, setSelectedChild] = useState<string>(getInitialChildId());
   const [currentInstrument, setCurrentInstrument] = useState<string>(
     selectedInstrument || (teacher.instruments.length > 0
       ? teacher.instruments.sort((a, b) => a.name.localeCompare(b.name))[0].name

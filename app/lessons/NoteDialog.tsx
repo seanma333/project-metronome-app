@@ -3,9 +3,25 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
-import { Textarea } from "@/app/components/ui/textarea";
 import { Label } from "@/app/components/ui/label";
+import Editor, {
+  Toolbar,
+  BtnBold,
+  BtnItalic,
+  BtnNumberedList,
+  BtnBulletList,
+  BtnUndo,
+  BtnRedo,
+} from "react-simple-wysiwyg";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
 import { createLessonNote, updateLessonNote } from "@/app/actions/manage-lesson-notes";
+import { getLessonEventOccurrences } from "@/app/actions/get-lesson-event-occurrences";
 
 interface NoteDialogProps {
   open: boolean;
@@ -27,22 +43,70 @@ export default function NoteDialog({
   const [noteTitle, setNoteTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [selectedLessonDate, setSelectedLessonDate] = useState<string>("");
+  const [lessonOccurrences, setLessonOccurrences] = useState<Array<{ date: Date; formatted: string }>>([]);
+  const [loadingOccurrences, setLoadingOccurrences] = useState(false);
+
+  useEffect(() => {
+    if (open && !isEditing) {
+      // Fetch lesson occurrences when creating a new note
+      const fetchOccurrences = async () => {
+        setLoadingOccurrences(true);
+        try {
+          const result = await getLessonEventOccurrences(lesson.lesson.id);
+          if (result.error) {
+            console.error("Error fetching lesson occurrences:", result.error);
+            setLessonOccurrences([]);
+          } else {
+            setLessonOccurrences(result.occurrences || []);
+          }
+        } catch (error) {
+          console.error("Error fetching lesson occurrences:", error);
+          setLessonOccurrences([]);
+        } finally {
+          setLoadingOccurrences(false);
+        }
+      };
+      fetchOccurrences();
+    }
+  }, [open, isEditing, lesson.lesson.id]);
 
   useEffect(() => {
     if (note && isEditing) {
       setNoteTitle(note.noteTitle || "");
       setNotes(note.notes || "");
+      // If note has a lessonDate, set it (though we won't show dropdown for editing)
+      if (note.lessonDate) {
+        setSelectedLessonDate(new Date(note.lessonDate).toISOString());
+      } else {
+        setSelectedLessonDate("");
+      }
     } else {
-      // Set default title with current date for new notes
-      const currentDate = new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-      setNoteTitle(`Lesson Notes - ${currentDate}`);
+      // Reset for new note
       setNotes("");
+      setSelectedLessonDate("");
+      // Set default title based on whether there are lesson occurrences
+      if (lessonOccurrences.length === 0) {
+        setNoteTitle("Before the Next Lesson");
+      } else {
+        setNoteTitle("");
+      }
     }
-  }, [note, isEditing, open]);
+  }, [note, isEditing, open, lessonOccurrences.length]);
+
+  // Update title when lesson date is selected
+  useEffect(() => {
+    if (selectedLessonDate && !isEditing) {
+      const selectedOccurrence = lessonOccurrences.find(
+        (occ) => occ.date.toISOString() === selectedLessonDate
+      );
+      if (selectedOccurrence) {
+        // Extract just the date part from the formatted string (before "at")
+        const datePart = selectedOccurrence.formatted.split(" at ")[0];
+        setNoteTitle(`Lesson notes - ${datePart}`);
+      }
+    }
+  }, [selectedLessonDate, lessonOccurrences, isEditing]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,10 +114,12 @@ export default function NoteDialog({
 
     try {
       let result;
+      const lessonDate = selectedLessonDate ? new Date(selectedLessonDate) : null;
+      
       if (isEditing && note) {
-        result = await updateLessonNote(note.id, noteTitle || null, notes);
+        result = await updateLessonNote(note.id, noteTitle || null, notes, lessonDate);
       } else {
-        result = await createLessonNote(lesson.lesson.id, noteTitle || null, notes);
+        result = await createLessonNote(lesson.lesson.id, noteTitle || null, notes, lessonDate);
       }
 
       if (result.error) {
@@ -87,6 +153,34 @@ export default function NoteDialog({
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {!isEditing && lessonOccurrences.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="lessonDate">Lesson Date</Label>
+                <Select
+                  value={selectedLessonDate}
+                  onValueChange={setSelectedLessonDate}
+                  disabled={loadingOccurrences}
+                >
+                  <SelectTrigger id="lessonDate" className="w-full">
+                    <SelectValue placeholder={loadingOccurrences ? "Loading dates..." : "Select a lesson date..."} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lessonOccurrences.map((occurrence) => (
+                      <SelectItem
+                        key={occurrence.date.toISOString()}
+                        value={occurrence.date.toISOString()}
+                      >
+                        {occurrence.formatted}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Select the date and time of the lesson this note is for
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="noteTitle">Note Title (Optional)</Label>
               <Input
@@ -101,14 +195,30 @@ export default function NoteDialog({
               <Label htmlFor="notes">
                 Notes <span className="text-destructive">*</span>
               </Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Enter detailed notes..."
-                required
-                rows={10}
-              />
+              <div className="border border-input rounded-md overflow-hidden">
+                <Editor
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  containerProps={{
+                    className: "min-h-[250px] p-3",
+                  }}
+                >
+                  <Toolbar>
+                    <BtnBold />
+                    <BtnItalic />
+                    <BtnNumberedList />
+                    <BtnBulletList />
+                    <BtnUndo />
+                    <BtnRedo />
+                  </Toolbar>
+                </Editor>
+              </div>
+              {!notes.trim() && (
+                <p className="text-xs text-muted-foreground">
+                  Please enter some notes
+                </p>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 pt-4">

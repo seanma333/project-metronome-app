@@ -44,6 +44,7 @@ export default async function SearchPage() {
   // Serialize dates for client components
   const serializedStudentProfile = studentProfile
     ? {
+        id: studentProfile.id,
         dateOfBirth: studentProfile.dateOfBirth
           ? new Date(studentProfile.dateOfBirth).toISOString()
           : null,
