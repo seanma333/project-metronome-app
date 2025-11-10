@@ -9,6 +9,7 @@ import InstrumentBadge from "@/app/components/profile/InstrumentBadge";
 import LanguageBadge from "@/app/components/profile/LanguageBadge";
 import { Button } from "@/app/components/ui/button";
 import Link from "next/link";
+import { SocialIcon } from "react-social-icons";
 
 interface TeacherProfilePageProps {
   params: Promise<{ profileName: string }>;
@@ -53,6 +54,15 @@ export default async function TeacherProfilePage({
                     </Button>
                   </div>
                 )}
+                {!user && (
+                  <div className="mt-6">
+                    <Button asChild className="w-full" size="lg">
+                      <Link href="/sign-up">
+                        Create Account to Book a Lesson
+                      </Link>
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Right Side - Bio, Instruments, Languages */}
@@ -63,6 +73,27 @@ export default async function TeacherProfilePage({
                     {teacher.bio || "No biography available."}
                   </p>
                 </ProfileSection>
+
+                {/* Follow Me */}
+                {teacher.socialLinks && teacher.socialLinks.length > 0 && (
+                  <ProfileSection title="Follow Me">
+                    <div className="flex flex-wrap gap-4">
+                      {teacher.socialLinks.map((link) => (
+                        <div
+                          key={link.id}
+                          className="transition-transform hover:scale-110"
+                        >
+                          <SocialIcon
+                            url={link.externalUrl}
+                            style={{ width: 40, height: 40 }}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </ProfileSection>
+                )}
 
                 {/* Instruments */}
                 <ProfileSection title="Instruments">

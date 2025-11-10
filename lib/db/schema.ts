@@ -57,6 +57,22 @@ export const teachers = pgTable("teachers", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Teacher social links table
+export const teacherSocialLinks = pgTable("teacher_social_links", {
+  id: uuid("id").primaryKey(),
+  teacherId: uuid("teacher_id")
+    .notNull()
+    .references(() => teachers.id, { onDelete: "cascade" }),
+  externalUrl: varchar("external_url", { length: 500 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Index for teacher lookups
+    teacherIdIdx: index("teacher_social_links_teacher_id_idx").on(table.teacherId),
+  };
+});
+
 // Junction table: Teachers to Instruments (many-to-many)
 export const teacherInstruments = pgTable("teacher_instruments", {
   id: serial("id").primaryKey(),

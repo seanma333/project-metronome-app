@@ -1,8 +1,8 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { teachers, users, teacherInstruments, teacherLanguages, instruments, languages } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { teachers, users, teacherInstruments, teacherLanguages, instruments, languages, teacherSocialLinks } from "@/lib/db/schema";
+import { eq, asc } from "drizzle-orm";
 
 export async function getTeacherByProfileName(profileName: string) {
   try {
@@ -40,11 +40,19 @@ export async function getTeacherByProfileName(profileName: string) {
       .innerJoin(languages, eq(teacherLanguages.languageId, languages.id))
       .where(eq(teacherLanguages.teacherId, teacherData.teacher.id));
 
+    // Get social links
+    const socialLinksData = await db
+      .select()
+      .from(teacherSocialLinks)
+      .where(eq(teacherSocialLinks.teacherId, teacherData.teacher.id))
+      .orderBy(asc(teacherSocialLinks.createdAt));
+
     return {
       ...teacherData.teacher,
       user: teacherData.user,
       instruments: teacherInstrumentsData.map(ti => ti.instrument),
       languages: teacherLanguagesData.map(tl => tl.language),
+      socialLinks: socialLinksData,
     };
   } catch (error) {
     console.error("Error fetching teacher profile:", error);

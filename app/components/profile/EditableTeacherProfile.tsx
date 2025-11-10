@@ -20,6 +20,8 @@ import {
 import { updateTeacherName } from "@/app/actions/update-teacher-name";
 import { updateTeacherImageUrl, uploadTeacherProfileImage } from "@/app/actions/update-teacher-image";
 import { getInstruments, getLanguages } from "@/app/actions/get-instruments-languages";
+import { getTeacherSocialLinks, addTeacherSocialLink, updateTeacherSocialLink, deleteTeacherSocialLink } from "@/app/actions/manage-teacher-social-links";
+import { SocialIcon } from "react-social-icons";
 
 interface EditableTeacherProfileProps {
   teacher: {
@@ -82,16 +84,28 @@ export default function EditableTeacherProfile({
     Array<{ id: number; name: string; code: string }>
   >([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [socialLinks, setSocialLinks] = useState<Array<{ id: string; externalUrl: string }>>([]);
+  const [isEditingSocialLinks, setIsEditingSocialLinks] = useState(false);
+  const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [isAddingLink, setIsAddingLink] = useState(false);
+  const [isDeletingLink, setIsDeletingLink] = useState<string | null>(null);
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
+  const [editingLinkUrl, setEditingLinkUrl] = useState("");
+  const [isUpdatingLink, setIsUpdatingLink] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [instrumentsData, languagesData] = await Promise.all([
+        const [instrumentsData, languagesData, socialLinksData] = await Promise.all([
           getInstruments(),
           getLanguages(),
+          getTeacherSocialLinks(),
         ]);
         setAllInstruments(instrumentsData);
         setAllLanguages(languagesData);
+        if (socialLinksData.success && socialLinksData.links) {
+          setSocialLinks(socialLinksData.links);
+        }
       } catch (err) {
         console.error("Error loading data:", err);
       } finally {
@@ -122,6 +136,95 @@ export default function EditableTeacherProfile({
 
   const handleAIBioSave = (generatedBio: string) => {
     setBio(generatedBio);
+  };
+
+  const handleAddSocialLink = async () => {
+    if (!newLinkUrl.trim()) {
+      alert("Please enter a URL");
+      return;
+    }
+
+    setIsAddingLink(true);
+    try {
+      const result = await addTeacherSocialLink(newLinkUrl.trim());
+      if (result.error) {
+        alert(result.error);
+      } else {
+        setNewLinkUrl("");
+        // Reload social links
+        const linksData = await getTeacherSocialLinks();
+        if (linksData.success && linksData.links) {
+          setSocialLinks(linksData.links);
+        }
+        router.refresh();
+      }
+    } catch (err) {
+      console.error("Error adding social link:", err);
+      alert("Failed to add social link");
+    } finally {
+      setIsAddingLink(false);
+    }
+  };
+
+  const handleEditSocialLink = (linkId: string, currentUrl: string) => {
+    setEditingLinkId(linkId);
+    setEditingLinkUrl(currentUrl);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingLinkId(null);
+    setEditingLinkUrl("");
+  };
+
+  const handleUpdateSocialLink = async (linkId: string) => {
+    if (!editingLinkUrl.trim()) {
+      alert("Please enter a URL");
+      return;
+    }
+
+    setIsUpdatingLink(linkId);
+    try {
+      const result = await updateTeacherSocialLink(linkId, editingLinkUrl.trim());
+      if (result.error) {
+        alert(result.error);
+      } else {
+        setEditingLinkId(null);
+        setEditingLinkUrl("");
+        // Reload social links
+        const linksData = await getTeacherSocialLinks();
+        if (linksData.success && linksData.links) {
+          setSocialLinks(linksData.links);
+        }
+        router.refresh();
+      }
+    } catch (err) {
+      console.error("Error updating social link:", err);
+      alert("Failed to update social link");
+    } finally {
+      setIsUpdatingLink(null);
+    }
+  };
+
+  const handleDeleteSocialLink = async (linkId: string) => {
+    setIsDeletingLink(linkId);
+    try {
+      const result = await deleteTeacherSocialLink(linkId);
+      if (result.error) {
+        alert(result.error);
+      } else {
+        // Reload social links
+        const linksData = await getTeacherSocialLinks();
+        if (linksData.success && linksData.links) {
+          setSocialLinks(linksData.links);
+        }
+        router.refresh();
+      }
+    } catch (err) {
+      console.error("Error deleting social link:", err);
+      alert("Failed to delete social link");
+    } finally {
+      setIsDeletingLink(null);
+    }
   };
 
   const handleSaveName = async () => {
@@ -447,6 +550,221 @@ export default function EditableTeacherProfile({
             <p className="text-muted-foreground whitespace-pre-wrap">
               {bio || "No biography available. Click edit to add one."}
             </p>
+          )}
+        </ProfileSection>
+
+        {/* Follow Me */}
+        <ProfileSection
+          title="Follow Me"
+          onEdit={() => setIsEditingSocialLinks(!isEditingSocialLinks)}
+          isEditing={isEditingSocialLinks}
+          showEditButton={true}
+        >
+          {isEditingSocialLinks ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Add links to your music-oriented profiles such as Spotify, SoundCloud, YouTube, Instagram, TikTok, or your personal website.
+              </p>
+              
+              {/* Existing Links */}
+              {socialLinks.length > 0 && (
+                <div className="space-y-2">
+                  {socialLinks.map((link) => (
+                    <div
+                      key={link.id}
+                      className="flex items-center gap-3 p-2 border rounded-lg"
+                    >
+                      <SocialIcon url={editingLinkId === link.id ? editingLinkUrl : link.externalUrl} style={{ width: 24, height: 24 }} />
+                      {editingLinkId === link.id ? (
+                        <>
+                          <Input
+                            type="url"
+                            value={editingLinkUrl}
+                            onChange={(e) => setEditingLinkUrl(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleUpdateSocialLink(link.id);
+                              } else if (e.key === "Escape") {
+                                handleCancelEdit();
+                              }
+                            }}
+                            className="flex-1"
+                            autoFocus
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleUpdateSocialLink(link.id)}
+                            disabled={isUpdatingLink === link.id || !editingLinkUrl.trim()}
+                            className="h-8 px-2"
+                          >
+                            {isUpdatingLink === link.id ? "Saving..." : "Save"}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCancelEdit}
+                            disabled={isUpdatingLink === link.id}
+                            className="h-8 px-2"
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <a
+                            href={link.externalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 text-sm text-primary hover:underline truncate"
+                          >
+                            {link.externalUrl}
+                          </a>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditSocialLink(link.id, link.externalUrl)}
+                            disabled={isDeletingLink === link.id || isUpdatingLink === link.id}
+                            className="h-8 px-2"
+                          >
+                            <Image
+                              src="/svg/edit_button.svg"
+                              alt="Edit"
+                              width={16}
+                              height={16}
+                              className="object-contain"
+                            />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteSocialLink(link.id)}
+                            disabled={isDeletingLink === link.id || isUpdatingLink === link.id}
+                            className="h-8 px-2 text-destructive hover:text-destructive"
+                          >
+                            {isDeletingLink === link.id ? (
+                              "Deleting..."
+                            ) : (
+                              <Image
+                                src="/svg/delete_button.svg"
+                                alt="Delete"
+                                width={16}
+                                height={16}
+                                className="object-contain"
+                              />
+                            )}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add New Link */}
+              <div className="flex gap-2">
+                <Input
+                  type="url"
+                  placeholder="https://..."
+                  value={newLinkUrl}
+                  onChange={(e) => setNewLinkUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleAddSocialLink();
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddSocialLink}
+                  disabled={isAddingLink || !newLinkUrl.trim()}
+                >
+                  {isAddingLink ? "Adding..." : "Add Link"}
+                </Button>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditingSocialLinks(false);
+                    setNewLinkUrl("");
+                  }}
+                >
+                  Done
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {socialLinks.length > 0 ? (
+                socialLinks.map((link) => (
+                  <div
+                    key={link.id}
+                    className="flex items-center gap-3 p-2 border rounded-lg hover:bg-accent/50 transition-colors group"
+                  >
+                    <SocialIcon url={link.externalUrl} style={{ width: 24, height: 24 }} />
+                    <a
+                      href={link.externalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 text-sm text-primary hover:underline truncate"
+                    >
+                      {link.externalUrl}
+                    </a>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setIsEditingSocialLinks(true);
+                          handleEditSocialLink(link.id, link.externalUrl);
+                        }}
+                        className="h-8 px-2"
+                      >
+                        <Image
+                          src="/svg/edit_button.svg"
+                          alt="Edit"
+                          width={16}
+                          height={16}
+                          className="object-contain"
+                        />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteSocialLink(link.id)}
+                        disabled={isDeletingLink === link.id}
+                        className="h-8 px-2 text-destructive hover:text-destructive"
+                      >
+                        {isDeletingLink === link.id ? (
+                          "Deleting..."
+                        ) : (
+                          <Image
+                            src="/svg/delete_button.svg"
+                            alt="Delete"
+                            width={16}
+                            height={16}
+                            className="object-contain"
+                          />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  No social links added. Click edit to add links to your music profiles.
+                </p>
+              )}
+            </div>
           )}
         </ProfileSection>
 
