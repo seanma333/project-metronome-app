@@ -25,16 +25,7 @@ export async function updateTeacherImageUrl(imageUrl: string) {
 
     const userId = user[0].id;
 
-    // Update teacher imageUrl in database
-    await db
-      .update(teachers)
-      .set({
-        imageUrl: imageUrl || null,
-        updatedAt: new Date(),
-      })
-      .where(eq(teachers.id, userId));
-
-    // Also update users table
+    // Update users table first
     await db
       .update(users)
       .set({
@@ -42,6 +33,24 @@ export async function updateTeacherImageUrl(imageUrl: string) {
         updatedAt: new Date(),
       })
       .where(eq(users.clerkId, clerkUser.id));
+
+    // Update teacher imageUrl in database (if teacher record exists)
+    // During onboarding, the teacher record might not exist yet, which is fine
+    const existingTeacher = await db
+      .select()
+      .from(teachers)
+      .where(eq(teachers.id, userId))
+      .limit(1);
+
+    if (existingTeacher.length > 0) {
+      await db
+        .update(teachers)
+        .set({
+          imageUrl: imageUrl || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(teachers.id, userId));
+    }
 
     return { success: true, imageUrl };
   } catch (error) {

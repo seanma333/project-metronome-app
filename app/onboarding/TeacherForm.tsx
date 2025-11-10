@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Label } from "@/app/components/ui/label";
 import { Input } from "@/app/components/ui/input";
@@ -11,6 +11,8 @@ import Image from "next/image";
 import { saveTeacherProfile } from "@/app/actions/save-teacher-profile";
 import { getInstruments, getLanguages } from "@/app/actions/get-instruments-languages";
 import { generateUniqueProfileName } from "@/app/actions/generate-profile-name";
+import { uploadTeacherProfileImage } from "@/app/actions/update-teacher-image";
+import AIBioAssistDialog from "@/app/components/profile/AIBioAssistDialog";
 import { cn } from "@/lib/utils";
 
 interface TeacherFormProps {
@@ -33,6 +35,10 @@ export default function TeacherForm({ firstName: defaultFirstName, lastName: def
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -90,6 +96,70 @@ export default function TeacherForm({ firstName: defaultFirstName, lastName: def
         ? prev.filter((id) => id !== languageId)
         : [...prev, languageId]
     );
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      alert("Please upload a valid image file (JPEG, PNG, GIF, or WebP)");
+      return;
+    }
+
+    // Validate file size
+    const minSize = 1024; // 1KB
+    const maxSize = 4 * 1024 * 1024; // 4MB
+    if (file.size < minSize) {
+      alert("Image file is too small. Please select a valid image file.");
+      return;
+    }
+    if (file.size > maxSize) {
+      alert("Image size must be less than 4MB. Please compress the image or choose a smaller file.");
+      return;
+    }
+
+    setIsUploadingImage(true);
+
+    try {
+      // Upload image to Vercel Blob
+      const result = await uploadTeacherProfileImage(file);
+      
+      if (result.error) {
+        console.error("Error uploading image:", result.error);
+        alert(result.error);
+      } else {
+        // Set preview URL
+        setPreviewImageUrl(result.imageUrl || null);
+      }
+    } catch (err) {
+      console.error("Error uploading image:", err);
+      alert("Failed to upload image");
+    } finally {
+      setIsUploadingImage(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAIBioSave = (generatedBio: string) => {
+    setBio(generatedBio);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -174,9 +244,86 @@ export default function TeacherForm({ firstName: defaultFirstName, lastName: def
         <Input id="email" value={email} disabled className="bg-muted" />
       </div>
 
+      {/* Profile Photo */}
+      <div className="space-y-2">
+        <Label>Profile Photo</Label>
+        <div className="flex items-center gap-4">
+          <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-primary/20 shadow-lg group">
+            <Image
+              src={previewImageUrl || "/images/profile/default_user.png"}
+              alt={[firstName, lastName].filter(Boolean).join(" ") || "Teacher"}
+              fill
+              className="object-cover"
+              sizes="128px"
+            />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <button
+                type="button"
+                onClick={handleUploadClick}
+                disabled={isUploadingImage}
+                className="p-2 bg-white/90 hover:bg-white rounded-full transition-colors disabled:opacity-50"
+                aria-label="Upload profile photo"
+              >
+                <Image
+                  src="/svg/upload_button.svg"
+                  alt="Upload"
+                  width={20}
+                  height={20}
+                  className="object-contain"
+                />
+              </button>
+            </div>
+          </div>
+          <div className="flex-1">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleUploadClick}
+              disabled={isUploadingImage}
+            >
+              {isUploadingImage ? "Uploading..." : "Upload Photo"}
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2">
+              JPEG, PNG, GIF, or WebP. Max 4MB.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Bio */}
       <div className="space-y-2">
-        <Label htmlFor="bio">Bio</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="bio">Bio</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsAIDialogOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="text-primary"
+            >
+              <path
+                d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828l.645-1.937zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.734 1.734 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.734 1.734 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.734 1.734 0 0 0 3.407 2.31l.387-1.162zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.156 1.156 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.156 1.156 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732L10.863.1z"
+                fill="currentColor"
+              />
+            </svg>
+            AI Assist
+          </Button>
+        </div>
         <Textarea
           id="bio"
           value={bio}
@@ -291,6 +438,14 @@ export default function TeacherForm({ firstName: defaultFirstName, lastName: def
           {isSaving ? "Saving..." : "Save"}
         </Button>
       </div>
+
+      {/* AI Bio Assist Dialog */}
+      <AIBioAssistDialog
+        isOpen={isAIDialogOpen}
+        onClose={() => setIsAIDialogOpen(false)}
+        onSave={handleAIBioSave}
+        teacherName={`${firstName} ${lastName}`.trim()}
+      />
     </form>
   );
 }

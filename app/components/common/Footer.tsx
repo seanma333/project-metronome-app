@@ -69,7 +69,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/how-it-works"
+                  href="/#how-it-works"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   How It Works
@@ -124,7 +124,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/sign-up?role=teacher"
+                  href="/my-profile"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   Create Profile

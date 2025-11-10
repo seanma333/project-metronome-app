@@ -40,6 +40,10 @@ export async function saveTeacherProfile(params: SaveTeacherProfileParams) {
     const { generateUniqueProfileName } = await import("./generate-profile-name");
     const profileName = await generateUniqueProfileName(params.firstName, params.lastName);
 
+    // Get the user's imageUrl in case it was set during onboarding (e.g., profile image upload)
+    const userRecord = user[0];
+    const userImageUrl = userRecord.imageUrl;
+
     // Check if teacher profile already exists
     const existingTeacher = await db
       .select()
@@ -54,6 +58,8 @@ export async function saveTeacherProfile(params: SaveTeacherProfileParams) {
         .set({
           bio: params.bio || null,
           profileName: profileName,
+          // Preserve existing imageUrl or use the one from users table
+          imageUrl: existingTeacher[0].imageUrl || userImageUrl || null,
           updatedAt: new Date(),
         })
         .where(eq(teachers.id, userId));
@@ -68,6 +74,8 @@ export async function saveTeacherProfile(params: SaveTeacherProfileParams) {
         bio: params.bio || null,
         profileName: profileName,
         acceptingStudents: false,
+        // Include imageUrl from users table if it exists (from onboarding image upload)
+        imageUrl: userImageUrl || null,
       });
     }
 
