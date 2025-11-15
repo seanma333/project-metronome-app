@@ -108,14 +108,6 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/teacher-resources"
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                >
-                  Teacher Resources
-                </Link>
-              </li>
-              <li>
-                <Link
                   href="/pricing"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
