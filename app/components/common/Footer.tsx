@@ -154,20 +154,20 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/contact"
+                <a
+                  href="mailto:contact@tempo-link.xyz"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   Contact
-                </Link>
+                </a>
               </li>
               <li>
-                <Link
-                  href="/support"
+                <a
+                  href="mailto:support@tempo-link.xyz"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   Support
-                </Link>
+                </a>
               </li>
             </ul>
           </div>
