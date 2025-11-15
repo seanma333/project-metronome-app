@@ -145,6 +145,18 @@ export default function Hero() {
                 priority
               />
             </div>
+            {/* Image Attribution */}
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Designed by{" "}
+              <a
+                href="https://www.freepik.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground underline transition-colors"
+              >
+                Freepik
+              </a>
+            </p>
             {/* Decorative elements */}
             <div className="absolute -top-6 -right-6 w-32 h-32 bg-primary/20 rounded-full blur-3xl -z-10" />
             <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-accent/30 rounded-full blur-3xl -z-10" />
