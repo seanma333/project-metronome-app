@@ -74,6 +74,7 @@ interface SearchFormProps {
 
 type TeachingType = "in-person" | "online";
 type LocationMethod = "address" | "postal-code";
+type AgeRange = "child" | "teenager" | "adult";
 
 function calculateAge(dateOfBirth: string | Date | null): number | null {
   if (!dateOfBirth) return null;
@@ -85,6 +86,24 @@ function calculateAge(dateOfBirth: string | Date | null): number | null {
     age--;
   }
   return age;
+}
+
+function ageToRange(age: number | null): AgeRange {
+  if (age === null || age < 4) return "child";
+  if (age >= 4 && age <= 12) return "child";
+  if (age >= 13 && age <= 17) return "teenager";
+  return "adult";
+}
+
+function rangeToAge(range: AgeRange): number {
+  switch (range) {
+    case "child":
+      return 8; // Middle of 4-12 range
+    case "teenager":
+      return 15; // Middle of 13-17 range
+    case "adult":
+      return 18; // Minimum for adult
+  }
 }
 
 export function SearchForm({
@@ -104,7 +123,7 @@ export function SearchForm({
   const [teachingType, setTeachingType] = useState<TeachingType>("in-person");
   const [selectedInstrument, setSelectedInstrument] = useState<string>("");
   const [selectedLanguage, setSelectedLanguage] = useState<string>("");
-  const [studentAge, setStudentAge] = useState<string>(defaultAge.toString());
+  const [studentAgeRange, setStudentAgeRange] = useState<AgeRange>(ageToRange(defaultAge));
   const [selectedStudent, setSelectedStudent] = useState<string>("");
   const [selectedTimezone, setSelectedTimezone] = useState<string>("");
   const [selectedAddress, setSelectedAddress] = useState<string>("");
@@ -143,7 +162,12 @@ export function SearchForm({
     if (tp) setTeachingType(tp);
     if (instr) setSelectedInstrument(instr);
     if (lang) setSelectedLanguage(lang);
-    if (ageQ) setStudentAge(ageQ);
+    if (ageQ) {
+      const ageNum = parseInt(ageQ);
+      if (!isNaN(ageNum)) {
+        setStudentAgeRange(ageToRange(ageNum));
+      }
+    }
     if (tz) setSelectedTimezone(tz);
     if (maxDiff) setMaxTimeDifference(maxDiff);
     if (locMethod) setLocationMethod(locMethod);
@@ -169,11 +193,9 @@ export function SearchForm({
   useEffect(() => {
     if (studentProfile?.dateOfBirth) {
       const age = calculateAge(studentProfile.dateOfBirth);
-      if (age !== null && age >= 4) {
-        setStudentAge(age.toString());
-      }
+      setStudentAgeRange(ageToRange(age));
     } else {
-      setStudentAge(defaultAge.toString());
+      setStudentAgeRange(ageToRange(defaultAge));
     }
   }, [defaultAge, studentProfile]);
 
@@ -183,21 +205,13 @@ export function SearchForm({
       const student = parentStudents.find((s) => s.id === selectedStudent);
       if (student?.dateOfBirth) {
         const age = calculateAge(student.dateOfBirth);
-        if (age !== null && age >= 4) {
-          setStudentAge(age.toString());
-        } else {
-          setStudentAge("4");
-        }
+        setStudentAgeRange(ageToRange(age));
       } else {
-        setStudentAge(defaultAge.toString());
+        setStudentAgeRange(ageToRange(defaultAge));
       }
     } else if ((!selectedStudent || selectedStudent === "none") && studentProfile?.dateOfBirth) {
       const age = calculateAge(studentProfile.dateOfBirth);
-      if (age !== null && age >= 4) {
-        setStudentAge(age.toString());
-      } else {
-        setStudentAge(defaultAge.toString());
-      }
+      setStudentAgeRange(ageToRange(age));
     }
   }, [selectedStudent, parentStudents, defaultAge, studentProfile]);
 
@@ -223,12 +237,12 @@ export function SearchForm({
     }
 
     try {
-      const age = parseInt(studentAge);
+      const age = rangeToAge(studentAgeRange);
       const searchParams = {
         teachingType,
         instrumentId: selectedInstrument,
         ...(selectedLanguage ? { languageId: selectedLanguage } : {}),
-        ...(age >= 4 ? { studentAge: age } : {}),
+        studentAge: age,
         ...(teachingType === "online"
           ? {
               timezone: selectedTimezone,
@@ -268,7 +282,7 @@ export function SearchForm({
       qp.set("teachingType", teachingType);
       qp.set("instrumentId", selectedInstrument);
       if (selectedLanguage) qp.set("languageId", selectedLanguage);
-      if (!isNaN(age) && age >= 4) qp.set("studentAge", String(age));
+      qp.set("studentAge", String(age));
       if (teachingType === "online") {
         qp.set("timezone", selectedTimezone);
         qp.set("maxTimeDifference", maxTimeDifference);
@@ -297,8 +311,8 @@ export function SearchForm({
       qpErr.set("teachingType", teachingType);
       qpErr.set("instrumentId", selectedInstrument);
       if (selectedLanguage) qpErr.set("languageId", selectedLanguage);
-      const ageErr = parseInt(studentAge);
-      if (!isNaN(ageErr) && ageErr >= 4) qpErr.set("studentAge", String(ageErr));
+      const ageErr = rangeToAge(studentAgeRange);
+      qpErr.set("studentAge", String(ageErr));
       if (teachingType === "online") {
         qpErr.set("timezone", selectedTimezone);
         qpErr.set("maxTimeDifference", maxTimeDifference);
@@ -446,21 +460,19 @@ export function SearchForm({
           <Label htmlFor="student-age" className="text-base font-semibold">
             Student Age
           </Label>
-          <Input
-            id="student-age"
-            type="number"
-            min="4"
-            value={studentAge}
-            onChange={(e) => {
-              const value = e.target.value;
-              const numValue = parseInt(value);
-              if (value === "" || (!isNaN(numValue) && numValue >= 4)) {
-                setStudentAge(value);
-              }
-            }}
-            placeholder="4"
-            className="w-full"
-          />
+          <Select
+            value={studentAgeRange}
+            onValueChange={(value) => setStudentAgeRange(value as AgeRange)}
+          >
+            <SelectTrigger id="student-age" className="w-full">
+              <SelectValue placeholder="Select age range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="child">Child (4-12)</SelectItem>
+              <SelectItem value="teenager">Teenager (13-17)</SelectItem>
+              <SelectItem value="adult">Adult (18+)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Online Teaching - Timezone Selection */}
@@ -618,8 +630,7 @@ export function SearchForm({
             disabled={
               isSearching ||
               !selectedInstrument ||
-              !studentAge ||
-              parseInt(studentAge) < 4 ||
+              !studentAgeRange ||
               (teachingType === "in-person" &&
                 ((locationMethod === "address" && !selectedAddress) ||
                  (locationMethod === "postal-code" && !postalCode))) ||
