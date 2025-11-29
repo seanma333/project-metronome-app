@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/ca
 import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
 import { acceptBookingRequest, declineBookingRequest } from "@/app/actions/get-booking-requests";
+import InviteStudentDialog from "./InviteStudentDialog";
 
 interface TeacherBookingRequestsProps {
   bookingRequests: any[];
@@ -72,6 +73,7 @@ export default function TeacherBookingRequests({
   onStatusUpdate
 }: TeacherBookingRequestsProps) {
   const [processingRequests, setProcessingRequests] = useState<Set<string>>(new Set());
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   // Helper function to sort timeslots (day of week first, then start time)
   const sortByTimeslot = (a: any, b: any) => {
@@ -171,6 +173,23 @@ export default function TeacherBookingRequests({
 
   return (
     <div className="space-y-8">
+      {/* Invite Student Button */}
+      <div className="flex justify-end">
+        <Button onClick={() => setInviteDialogOpen(true)}>
+          Invite Student
+        </Button>
+      </div>
+
+      {/* Invite Dialog */}
+      <InviteStudentDialog
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        onInviteSent={() => {
+          // Optionally refresh booking requests or show success message
+          // For now, we'll just close the dialog
+        }}
+      />
+
       {/* Recommendation notice */}
       <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
         <div className="flex items-start gap-3">

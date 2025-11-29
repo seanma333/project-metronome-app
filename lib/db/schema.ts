@@ -24,6 +24,9 @@ export const eventStatusEnum = pgEnum("event_status", ["CONFIRMED", "TENTATIVE",
 // Event type enum for calendar events
 export const eventTypeEnum = pgEnum("event_type", ["LESSON", "AVAILABILITY", "PERSONAL", "OTHER"]);
 
+// Invite role enum for teacher invites
+export const inviteRoleEnum = pgEnum("invite_role", ["PARENT", "STUDENT"]);
+
 // PostGIS Geography type for spatial data
 const geography = customType<{ data: string; driverParam: string }>({
   dataType: () => 'geography(Point, 4326)',
@@ -427,5 +430,36 @@ export const calendarEventAttendees = pgTable("calendar_event_attendees", {
     userIdIdx: index("calendar_event_attendees_user_id_idx").on(table.userId),
     // Index for participation status queries
     participationStatusIdx: index("calendar_event_attendees_participation_status_idx").on(table.participationStatus),
+  };
+});
+
+// Invites table - for teachers to invite students or parents
+export const invites = pgTable("invites", {
+  id: uuid("id").primaryKey(),
+  teacherId: uuid("teacher_id")
+    .notNull()
+    .references(() => teachers.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  email: varchar("email", { length: 255 }).notNull(),
+  fullName: varchar("full_name", { length: 200 }).notNull(),
+  timeslotId: uuid("timeslot_id").references(() => teacherTimeslots.id, { onDelete: "set null" }),
+  role: inviteRoleEnum("role").notNull(),
+  emailSent: boolean("email_sent").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Index for teacher lookups
+    teacherIdIdx: index("invites_teacher_id_idx").on(table.teacherId),
+    // Index for user lookups
+    userIdIdx: index("invites_user_id_idx").on(table.userId),
+    // Index for timeslot lookups
+    timeslotIdIdx: index("invites_timeslot_id_idx").on(table.timeslotId),
+    // Index for email lookups
+    emailIdx: index("invites_email_idx").on(table.email),
+    // Index for email sent status queries
+    emailSentIdx: index("invites_email_sent_idx").on(table.emailSent),
+    // Index for role queries
+    roleIdx: index("invites_role_idx").on(table.role),
   };
 });

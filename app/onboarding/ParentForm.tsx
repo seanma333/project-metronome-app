@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { saveParentProfile } from "@/app/actions/save-parent-profile";
 import { getInstruments } from "@/app/actions/get-instruments-languages";
 import { setStudentInstrumentProficiency } from "@/app/actions/manage-instrument-proficiency";
+import { setOnboardedStatus } from "@/app/actions/update-user-metadata";
 
 interface ParentFormProps {
   firstName: string;
@@ -60,6 +61,12 @@ export default function ParentForm({ firstName: defaultFirstName, lastName: defa
         });
 
         if (!result.error && result.studentId) {
+          // Mark user as onboarded
+          const onboardedResult = await setOnboardedStatus(true);
+          if (onboardedResult.error) {
+            console.error("Error setting onboarded status:", onboardedResult.error);
+            // Still redirect even if setting onboarded status fails
+          }
           router.push("/");
         } else {
           alert("Failed to save profile. Please try again.");
@@ -149,6 +156,13 @@ export default function ParentForm({ firstName: defaultFirstName, lastName: defa
         if (profResult.error) {
           console.error("Error saving proficiency:", profResult.error);
         }
+      }
+
+      // Mark user as onboarded
+      const onboardedResult = await setOnboardedStatus(true);
+      if (onboardedResult.error) {
+        console.error("Error setting onboarded status:", onboardedResult.error);
+        // Still redirect even if setting onboarded status fails
       }
 
       router.push("/");

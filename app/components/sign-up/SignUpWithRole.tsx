@@ -11,6 +11,7 @@ type Role = "TEACHER" | "STUDENT" | "PARENT";
 export default function SignUpWithRole() {
   const searchParams = useSearchParams();
   const roleParam = searchParams.get("role");
+  const invitationIdParam = searchParams.get("invitationId");
 
   // Normalize role param (e.g., "teacher" -> "TEACHER")
   const normalizedRole = roleParam && ["TEACHER", "STUDENT", "PARENT"].includes(roleParam.toUpperCase())
@@ -32,10 +33,20 @@ export default function SignUpWithRole() {
     }
   };
 
-  // Build the redirect URL with the role parameter
-  const fallbackRedirectUrl = selectedRole
-    ? `/onboarding?role=${selectedRole}`
-    : "/onboarding";
+  // Build the redirect URL with the role and invitationId parameters
+  const buildRedirectUrl = () => {
+    const params = new URLSearchParams();
+    if (selectedRole) {
+      params.set("role", selectedRole);
+    }
+    if (invitationIdParam) {
+      params.set("invitationId", invitationIdParam);
+    }
+    const queryString = params.toString();
+    return queryString ? `/onboarding?${queryString}` : "/onboarding";
+  };
+
+  const fallbackRedirectUrl = buildRedirectUrl();
 
   // Show role selection if no role is selected or not confirmed
   if (!selectedRole || !roleConfirmed) {

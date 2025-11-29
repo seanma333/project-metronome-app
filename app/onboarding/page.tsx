@@ -7,7 +7,7 @@ import { updateUserRole } from "@/app/actions/update-user-metadata";
 export default async function OnboardingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ role?: string }>;
+  searchParams: Promise<{ role?: string; invitationId?: string }>;
 }) {
   const user = await currentUser();
 
@@ -17,18 +17,28 @@ export default async function OnboardingPage({
 
   const params = await searchParams;
   const roleParam = params.role;
+  const invitationId = params.invitationId;
 
-  // Check if user has a role in metadata
+  // Check if user has a role and onboarded status in metadata
   let role = user.publicMetadata?.role as string | undefined;
+  const onboarded = (user.publicMetadata as { onboarded?: boolean } | undefined)?.onboarded ?? false;
   const validRoles = ["TEACHER", "STUDENT", "PARENT"];
+
+  // If user is already onboarded, redirect to home
+  if (onboarded && role && validRoles.includes(role.toUpperCase())) {
+    redirect("/");
+  }
 
   // If role is in query params but not in metadata, set it automatically and redirect
   if (roleParam && validRoles.includes(roleParam.toUpperCase()) && !role) {
     // Set the role in metadata
     const roleToSet = roleParam.toUpperCase() as "TEACHER" | "STUDENT" | "PARENT";
     await updateUserRole(roleToSet);
-    // Redirect to onboarding without query param to refresh session
-    redirect("/onboarding");
+    // Redirect to onboarding, preserving invitationId if present
+    const redirectUrl = invitationId 
+      ? `/onboarding?invitationId=${invitationId}`
+      : "/onboarding";
+    redirect(redirectUrl);
   }
 
   return (
@@ -60,6 +70,7 @@ export default async function OnboardingPage({
               firstName={user.firstName || ""}
               lastName={user.lastName || ""}
               email={user.emailAddresses[0]?.emailAddress || ""}
+              invitationId={invitationId}
             />
           )}
         </div>

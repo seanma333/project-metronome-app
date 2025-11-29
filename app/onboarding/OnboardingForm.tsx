@@ -13,9 +13,10 @@ interface OnboardingFormProps {
   firstName: string;
   lastName: string;
   email: string;
+  invitationId?: string;
 }
 
-export default function OnboardingForm({ userId, role, firstName, lastName, email }: OnboardingFormProps) {
+export default function OnboardingForm({ userId, role, firstName, lastName, email, invitationId }: OnboardingFormProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,12 +26,24 @@ export default function OnboardingForm({ userId, role, firstName, lastName, emai
         // Get user's timezone from browser
         const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-        const result = await createUserFromClerk(timezone);
-        if (result.error) {
+        // Add a timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Request timeout")), 10000); // 10 second timeout
+        });
+
+        const result = await Promise.race([
+          createUserFromClerk(timezone, invitationId),
+          timeoutPromise,
+        ]) as Awaited<ReturnType<typeof createUserFromClerk>>;
+
+        if (result?.error) {
           setError(result.error);
         }
       } catch (err) {
-        setError("Failed to initialize user");
+        const errorMessage = err instanceof Error && err.message === "Request timeout"
+          ? "Request timed out. Please try refreshing the page."
+          : "Failed to initialize user";
+        setError(errorMessage);
         console.error("Error creating user:", err);
       } finally {
         setIsLoading(false);
@@ -38,7 +51,7 @@ export default function OnboardingForm({ userId, role, firstName, lastName, emai
     };
 
     createUser();
-  }, []);
+  }, [invitationId]);
 
   if (isLoading) {
     return (

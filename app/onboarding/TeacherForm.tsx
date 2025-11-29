@@ -12,6 +12,7 @@ import { saveTeacherProfile } from "@/app/actions/save-teacher-profile";
 import { getInstruments, getLanguages } from "@/app/actions/get-instruments-languages";
 import { generateUniqueProfileName } from "@/app/actions/generate-profile-name";
 import { uploadTeacherProfileImage } from "@/app/actions/update-teacher-image";
+import { setOnboardedStatus } from "@/app/actions/update-user-metadata";
 import AIBioAssistDialog from "@/app/components/profile/AIBioAssistDialog";
 import { cn } from "@/lib/utils";
 
@@ -186,6 +187,12 @@ export default function TeacherForm({ firstName: defaultFirstName, lastName: def
       if (result.error) {
         setError(result.error);
       } else {
+        // Mark user as onboarded
+        const onboardedResult = await setOnboardedStatus(true);
+        if (onboardedResult.error) {
+          console.error("Error setting onboarded status:", onboardedResult.error);
+          // Still redirect even if setting onboarded status fails
+        }
         router.push("/");
       }
     } catch (err) {
