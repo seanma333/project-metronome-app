@@ -60,6 +60,7 @@ export default function InviteStudentDialog({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   // Fetch timeslots when dialog opens
   useEffect(() => {
@@ -90,6 +91,7 @@ export default function InviteStudentDialog({
       setSelectedDay("");
       setSelectedTimeslotId("");
       setError(null);
+      setSuccess(false);
     }
   }, [open]);
 
@@ -152,16 +154,24 @@ export default function InviteStudentDialog({
 
       if (result.error) {
         setError(result.error);
+        setSuccess(false);
       } else {
-        // Success - close dialog and notify parent
-        onOpenChange(false);
-        if (onInviteSent) {
-          onInviteSent();
-        }
+        // Success - show success message
+        setSuccess(true);
+        setError(null);
+        
+        // Close dialog after a short delay to show success message
+        setTimeout(() => {
+          onOpenChange(false);
+          if (onInviteSent) {
+            onInviteSent();
+          }
+        }, 2000);
       }
     } catch (err) {
       console.error("Error creating invite:", err);
       setError("Failed to create invite. Please try again.");
+      setSuccess(false);
     } finally {
       setSubmitting(false);
     }
@@ -183,6 +193,13 @@ export default function InviteStudentDialog({
           {error && (
             <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
               <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
+          {success && (
+            <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+              <p className="text-sm text-green-800 dark:text-green-200">
+                Invitation created successfully!
+              </p>
             </div>
           )}
 

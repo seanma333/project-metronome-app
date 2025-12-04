@@ -3,7 +3,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { users, teachers, invites } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { inngest } from "@/lib/inngest/client";
 
@@ -80,33 +80,47 @@ export async function createInvite(params: CreateInviteParams) {
       }
     }
 
+    // Check if a user exists with the same email (case-insensitive)
+    const trimmedEmail = params.email.trim().toLowerCase();
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(sql`LOWER(${users.email}) = ${trimmedEmail}`)
+      .limit(1);
+
+    const existingUserId = existingUser.length > 0 ? existingUser[0].id : null;
+    const emailAlreadySent = existingUserId !== null; // If user exists, mark email as sent
+
     // Create invite
     const inviteId = randomUUID();
     await db.insert(invites).values({
       id: inviteId,
       teacherId: userData.id,
+      userId: existingUserId,
       email: params.email.trim(),
       fullName: params.fullName.trim(),
       timeslotId: params.timeslotId || null,
       role: params.role,
-      emailSent: false,
+      emailSent: emailAlreadySent,
     });
 
-    // Trigger Inngest event to send email
-    try {
-      await inngest.send({
-        name: "invite.created",
-        data: {
-          inviteId,
-        },
-      });
-    } catch (error) {
-      console.error("Error triggering Inngest event:", error);
-      // Don't fail the invite creation if event trigger fails
-      // The periodic cleanup will pick it up
+    // Trigger Inngest event to send email only if email hasn't been sent
+    if (!emailAlreadySent) {
+      try {
+        await inngest.send({
+          name: "invite.created",
+          data: {
+            inviteId,
+          },
+        });
+      } catch (error) {
+        console.error("Error triggering Inngest event:", error);
+        // Don't fail the invite creation if event trigger fails
+        // The periodic cleanup will pick it up
+      }
     }
 
-    return { success: true, inviteId };
+    return { success: true, inviteId, userExists: emailAlreadySent };
   } catch (error) {
     console.error("Error creating invite:", error);
     return { error: "Failed to create invite" };
